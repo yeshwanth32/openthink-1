@@ -1,0 +1,6 @@
+#python specific
+*.pyc
+*.db
+*.ppk
+extra/
+openthink-env/
