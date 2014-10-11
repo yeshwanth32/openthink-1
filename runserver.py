@@ -1,2 +1,2 @@
-from openthink import app
+from server import app
 app.run(debug=True)

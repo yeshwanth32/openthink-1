@@ -4,3 +4,4 @@
 *.ppk
 extra/
 openthink-env/
+server/static/
