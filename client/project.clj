@@ -6,7 +6,9 @@
                  [org.clojure/clojurescript "0.0-2371"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [om "0.7.3"]
-                 [sablono "0.2.15"]]
+                 [sablono "0.2.22"]
+                 [prismatic/dommy "0.1.3"]
+                 [cljs-ajax "0.3.3"]]
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 

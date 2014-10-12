@@ -1,6 +1,6 @@
 import datetime as dt
 
-from server import app
+from server import app, login_manager
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
@@ -39,6 +39,14 @@ class User(db.Model, SurrogatePK, UserMixin):
 
     def check_password(self, value):
         return bcrypt.check_password_hash(self.password, value)
+
+    @classmethod
+    def login_user(cls, username, password):
+        user = cls.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            return user
+        else:
+            return None
 
     def __repr__(self):
         return '<User({username!r})>'.format(username=self.username)
@@ -105,3 +113,8 @@ class Comment(db.Model, SurrogatePK):
 
     def __repr__(self):
         return '<Comment %r>' % self.body
+
+@login_manager.user_loader
+def load_user(userid):
+    return User.get(userid)
+
