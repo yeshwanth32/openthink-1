@@ -30,7 +30,7 @@
           (let [posting (<! post-ch)]
             (om/set-state! owner :is-posting true)
             (POST "/login"
-                  {:format :raw
+                  {:format :transit
                    :params {"username" (om/get-state owner :username)
                             "password" (om/get-state owner :password)}
                    :handler (fn [resp]

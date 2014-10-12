@@ -7,6 +7,9 @@ Werkzeug==0.9.6
 Jinja2==2.7.3
 itsdangerous==0.24
 
+# Application
+# transit-python  #todo: figure out way to describe transit-python package here
+
 # Database
 Flask-SQLAlchemy==2.0
 SQLAlchemy==0.9.7
