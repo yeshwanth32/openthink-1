@@ -30,12 +30,14 @@
           (let [posting (<! post-ch)]
             (om/set-state! owner :is-posting true)
             (POST "/login"
-                  {:format :transit
-                   :params {"username" (om/get-state owner :username)
-                            "password" (om/get-state owner :password)}
-                   :handler (fn [resp]
-                              (println "login form returned"))}))
-                       (recur))))
+              {:response-format :transit
+               :params {"username" (om/get-state owner :username)
+                        "password" (om/get-state owner :password)}
+               :handler (fn [resp]
+                          (println "login form returned")
+                          (println resp)
+                          (om/update! data :user (clojure.walk/keywordize-keys resp)))}))
+                 (recur))))
     om/IRender
     (render [this]
       (html (if (om/get-state owner :is-posting)
@@ -46,22 +48,43 @@
                            :placeholder "username"
                            :value (om/get-state owner :username)
                            :onChange #(handle-change % owner :username)}]
-                  [:input  {:id "login-password"
-                            :placeholder "password"
-                            :value (om/get-state owner :password)
-                            :onChange #(handle-change % owner :password)}]
-                  [:button {:type "button" :className "btn btn-info"
-                            :onClick (fn [e] (put!(om/get-state owner :post) 1) false)}
-                    "Login"]]])))))
+                 [:input  {:id "login-password"
+                           :placeholder "password"
+                           :value (om/get-state owner :password)
+                           :onChange #(handle-change % owner :password)}]
+                 [:button {:type "button" :className "btn btn-info"
+                           :onClick (fn [e] (put!(om/get-state owner :post) 1) false)}
+                   "Login"]]])))))
+
+(defn logout-button [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:button
+             {:type "button"
+              :onClick (fn [_]
+                         (POST "/logout"
+                           {:response-format :transit
+                            :handler (fn [resp] (println resp) (om/update! data :user nil))}))}
+             "Log out"]))))
+
+(defn user-bar [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:div (if (:user data)
+                    [:div (str "logged in as " (get-in data [:user :username]))
+                      [:div (om/build logout-button data)]]
+                    (om/build login-form data))]))))
 
 (defn header [data owner]
   (reify
     om/IRender
     (render [this]
       (html [:div {:class "page-header"}
-              (om/build login-form data)]))))
+              (om/build user-bar data)]))))
 
-(def app-state (atom {}))
+(def app-state (atom {:user nil}))
 
 (defn app [data owner opts]
   (reify
