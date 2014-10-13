@@ -9,7 +9,8 @@
             [clojure.string :as str]
             [om.core :as om]
             [om.dom :as d]
-            [sablono.core :as html :refer-macros [html]]))
+            [sablono.core :as html :refer-macros [html]]
+            [cognitect.transit :as t]))
 
 (enable-console-print!)
 
@@ -84,7 +85,28 @@
       (html [:div {:class "page-header"}
               (om/build user-bar data)]))))
 
-(def app-state (atom {:user nil}))
+(defn unescape-html
+  "change html character entities into special characters"
+  [text]
+  (-> (str text)
+      (clojure.string/replace "&amp;" "&")
+      (clojure.string/replace "&lt;" "<")
+      (clojure.string/replace "&gt;" ">")
+      (clojure.string/replace "&quot;" "\"")
+      (clojure.string/replace "&#34;" "\"")
+      (clojure.string/replace "&#x27;" "'")
+      (clojure.string/replace "&#x2F;" "/")))
+
+(def app-state
+  (let [init-data js/initial_app_state
+        rdr (t/reader :json)]
+    (->> init-data
+         unescape-html
+         (t/read rdr)
+         clojure.walk/keywordize-keys
+         atom)))
+
+(println app-state)
 
 (defn app [data owner opts]
   (reify

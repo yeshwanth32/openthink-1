@@ -8,7 +8,8 @@
                  [om "0.7.3"]
                  [sablono "0.2.22"]
                  [prismatic/dommy "0.1.3"]
-                 [cljs-ajax "0.3.3"]]
+                 [cljs-ajax "0.3.3"]
+                 [com.cognitect/transit-cljs "0.8.188"]]
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 
