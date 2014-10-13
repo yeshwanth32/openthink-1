@@ -42,3 +42,14 @@ def login():
 def logout():
     logout_user()
     return transitify("Log out successful")
+
+@app.route("/register", methods=["POST"])
+def register():
+    req_data = get_post_data_from_req(request)
+    user = User.register_user(req_data.get("username"), 
+                              req_data.get("email"),
+                              req_data.get("password"))
+    if isinstance(user, basestring):
+        return transitify({"error": user})
+    login_user(user)
+    return transitify({"username": user.username, "id": user.id})

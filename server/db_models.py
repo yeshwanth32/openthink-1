@@ -18,7 +18,39 @@ class SurrogatePK(object):
 
     id = db.Column(db.Integer, primary_key=True)
 
-class User(db.Model, SurrogatePK, UserMixin):
+class CRUDMixin(object):
+    """Mixin that adds convenience methods for CRUD (create, read, update, delete)
+    operations.
+    """
+
+    @classmethod
+    def create(cls, **kwargs):
+        """Create a new record and save it the database."""
+        instance = cls(**kwargs)
+        return instance.save()
+
+    def update(self, commit=True, **kwargs):
+        """Update specific fields of a record."""
+        for attr, value in kwargs.iteritems():
+            setattr(self, attr, value)
+        return commit and self.save() or self
+
+    def save(self, commit=True):
+        """Save the record."""
+        db.session.add(self)
+        if commit:
+            db.session.commit()
+        return self
+
+    def delete(self, commit=True):
+        """Remove the record from the database."""
+        db.session.delete(self)
+        return commit and db.session.commit()
+
+class Model(CRUDMixin, db.Model, SurrogatePK):
+    __abstract__ = True
+
+class User(Model, UserMixin):
     __tablename__ = 'users'
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -47,6 +79,13 @@ class User(db.Model, SurrogatePK, UserMixin):
             return user
         else:
             return None
+
+    @classmethod
+    def register_user(cls, username, email, password):
+        user = cls.query.filter_by(username=username).first()
+        if user:
+            return "user already exists"
+        return cls.create(username=username, email=email, password=password)
 
     def __repr__(self):
         return '<User({username!r})>'.format(username=self.username)

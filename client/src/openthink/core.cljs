@@ -69,6 +69,49 @@
                             :handler (fn [resp] (println resp) (om/update! data :user nil))}))}
              "Log out"]))))
 
+(defn register-form [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:post (chan) :username "" :email "" :password ""})
+    om/IWillMount
+    (will-mount [_]
+      (let [post-ch (om/get-state owner :post)]
+        (go-loop []
+          (let [posting (<! post-ch)]
+            (om/set-state! owner :is-posting true)
+            (POST "/register"
+                  {:response-format :transit
+                   :params {"username" (om/get-state owner :username)
+                            "email" (om/get-state owner :email)
+                            "password" (om/get-state owner :password)}
+                   :handler (fn [resp]
+                              (println "register form returned")
+                              (println resp)
+                              (om/update! data :user (clojure.walk/keywordize-keys resp)))}))
+                 (recur))))
+    om/IRender
+    (render [this]
+      (html (if (om/get-state owner :is-posting)
+              [:div [:h4 nil "Registering... Please wait."]]
+              [:div {:id "register"}
+                [:form {:id "register-form"}
+                  [:input {:id "register-username" :type "text"
+                           :placeholder "username"
+                           :value (om/get-state owner :username)
+                           :onChange #(handle-change % owner :username)}]
+                 [:input {:id "register-email" :type "text"
+                           :placeholder "email"
+                           :value (om/get-state owner :email)
+                           :onChange #(handle-change % owner :email)}]
+                 [:input  {:id "register-password" :type "password"
+                           :placeholder "password"
+                           :value (om/get-state owner :password)
+                           :onChange #(handle-change % owner :password)}]
+                 [:button {:type "button" :className "btn btn-info"
+                           :onClick (fn [e] (put!(om/get-state owner :post) 1) false)}
+                   "Register"]]])))))
+
 (defn user-bar [data owner]
   (reify
     om/IRender
@@ -76,7 +119,9 @@
       (html [:div (if (:user data)
                     [:div (str "logged in as " (get-in data [:user :username]))
                       [:div (om/build logout-button data)]]
-                    (om/build login-form data))]))))
+                    [:div (om/build login-form data)
+                          [:span " or "]
+                          (om/build register-form data)])]))))
 
 (defn header [data owner]
   (reify
