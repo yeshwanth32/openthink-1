@@ -5,3 +5,4 @@
 extra/
 openthink-env/
 server/static/
+client/target/

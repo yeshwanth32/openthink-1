@@ -15,9 +15,13 @@
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/main.css">
         <script src="js/vendor/modernizr-2.6.2.min.js"></script> -->
+        <link href='http://fonts.googleapis.com/css?family=Corben' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="{{ url_for('static', filename='normalize.css') }}"></link>
+        <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></link>
         <script type='text/javascript'>
             var initial_app_state = "{{ app_state }}";
         </script>
+        <script type='text/javascript' id='lt_ws' src='http://localhost:50619/socket.io/lighttable/ws.js'></script>
     </head>
     <body>
         <!--[if lt IE 7]>
