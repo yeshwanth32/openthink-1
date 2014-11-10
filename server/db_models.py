@@ -90,7 +90,8 @@ class User(Model, UserMixin):
     def __repr__(self):
         return '<User({username!r})>'.format(username=self.username)
 
-class Post(db.Model, SurrogatePK):
+
+class Post(Model, SurrogatePK):
     __tablename__ = 'posts'
     title = db.Column(db.String(140))
     body = db.Column(db.Text)
@@ -106,8 +107,15 @@ class Post(db.Model, SurrogatePK):
         self.time_posted = time_posted
         self.user = user
 
+    @classmethod
+    def submit_post(cls, user, title, text):
+        if user and title and text:
+            return cls.create(title=title, body=text, user=user)
+        return "missing data"
+
     def __repr__(self):
         return '<Post %r>' % self.title
+
 
 class Relation(db.Model, SurrogatePK):
     __tablename__ = 'relations'

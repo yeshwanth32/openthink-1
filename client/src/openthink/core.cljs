@@ -43,7 +43,11 @@
                :handler (fn [resp]
                           (println "login form returned")
                           (println resp)
-                          (om/update! data :user (clojure.walk/keywordize-keys resp)))}))
+                          (let [resp (clojure.walk/keywordize-keys resp)]
+                            (println resp)
+                            (if (contains? resp :error)
+                              (om/set-state! owner :is-posting false)
+                              (om/update! data :user resp))))}))
                  (recur))))
     om/IRender
     (render [this]
@@ -51,40 +55,28 @@
               [:li [:h4 "Logging in... Please wait."]]
               [:li {:className "login-form has-form"}
                 [:div {:className "row collapse"}
-                 [:div {:className "large-4 columns"}
+                 [:div {:className "small-3 columns"}
                   [:input {:id "login-username" :type "text"
                            :placeholder "username"
                            :value (om/get-state owner :username)
                            :onChange #(handle-change % owner :username)
                            }]]
-                 [:div {:className "large-4 columns"}
+                 [:div {:className "small-3 columns"}
                   [:input {:id "login-password"
                            :placeholder "password"
                            :value (om/get-state owner :password)
                            :onChange #(handle-change % owner :password)
                            }]]
-                 [:div {:className "large-4 columns"}
+                 [:div {:className "small-3 columns"}
                   [:button {:type "button" :className "btn btn-info"
                             :onClick (fn [e] (put!(om/get-state owner :post) 1) false)
                             }
                    "Login"]]
-                 ]]
-
-
-;;               [:div {:id "login"}
-;;                 [:form {:id "login-form"}
-;;                   [:input {:id "login-username" :type "text"
-;;                            :placeholder "username"
-;;                            :value (om/get-state owner :username)
-;;                            :onChange #(handle-change % owner :username)}]
-;;                  [:input  {:id "login-password"
-;;                            :placeholder "password"
-;;                            :value (om/get-state owner :password)
-;;                            :onChange #(handle-change % owner :password)}]
-;;                  [:button {:type "button" :className "btn btn-info"
-;;                            :onClick (fn [e] (put!(om/get-state owner :post) 1) false)}
-;;                    "Login"]]]
-              )))))
+                 [:div {:className "small-3 columns inline"}
+                   "or "
+                   [:a {:href "#" :onClick (fn [e]
+                                             (om/update! data :modal :register))}
+                    "Register"]]]])))))
 
 (defn logout-button [data owner]
   (reify
@@ -97,6 +89,7 @@
                            {:response-format :transit
                             :handler (fn [resp] (println resp) (om/update! data :user nil))}))}
              "Log out"]))))
+
 
 (defn register-form [data owner]
   (reify
@@ -117,70 +110,44 @@
                    :handler (fn [resp]
                               (println "register form returned")
                               (println resp)
-                              (om/update! data :user (clojure.walk/keywordize-keys resp)))}))
+                              (let [resp (clojure.walk/keywordize-keys resp)]
+                                (println resp)
+                                (when-not (contains? resp :error)
+                                  (om/update! data :user resp))))}))
                  (recur))))
     om/IRender
     (render [this]
       (html (if (om/get-state owner :is-posting)
               [:li [:div nil "Registering... Please wait."]]
-              [:li {:className "register-form has-form"}
-                [:div {:className "row collapse"}
-                 [:div {:className "large-12 columns"}
-                  [:input {:id "register-username" :type "text"
-                           :placeholder "username"
-                           :value (om/get-state owner :username)
-                           :onChange #(handle-change % owner :username)
-                           }]]
-                 [:div {:className "large-12 columns"}
-                  [:input {:id "register-email" :type "text"
-                           :placeholder "email"
-                           :value (om/get-state owner :email)
-                           :onChange #(handle-change % owner :email)
-                           }]]
-                 [:div {:className "large-12 columns"}
-                  [:input {:id "register-password"
-                           :placeholder "password"
-                           :value (om/get-state owner :password)
-                           :onChange #(handle-change % owner :password)
-                           }]]
-                 [:div {:className "large-4 columns"}
-                  [:button {:type "button" :className "btn btn-info"
-                            :onClick (fn [e] (put!(om/get-state owner :post) 1) false)
-                            }
-                   "Login"]]
-                 ]]
-;;               [:div {:id "register"}
-;;                 [:form {:id "register-form"}
-;;                   [:input {:id "register-username" :type "text"
-;;                            :placeholder "username"
-;;                            :value (om/get-state owner :username)
-;;                            :onChange #(handle-change % owner :username)}]
-;;                  [:input {:id "register-email" :type "text"
-;;                            :placeholder "email"
-;;                            :value (om/get-state owner :email)
-;;                            :onChange #(handle-change % owner :email)}]
-;;                  [:input  {:id "register-password" :type "password"
-;;                            :placeholder "password"
-;;                            :value (om/get-state owner :password)
-;;                            :onChange #(handle-change % owner :password)}]
-;;                  [:button {:type "button" :className "btn btn-info"
-;;                            :onClick (fn [e] (put!(om/get-state owner :post) 1) false)}
-;;                    "Register"]]]
-
-
-              )))))
-
-;; (defn user-bar [data owner]
-;;   (reify
-;;     om/IRender
-;;     (render [this]
-;;       (html [:div (if (:user data)
-;;                     [:div (str "logged in as " (get-in data [:user :username]))
-;;                       [:div (om/build logout-button data)]]
-;;                     [:div (om/build login-form data)
-;;                           [:span " or "]
-;;                           (om/build register-form data)])]))))
-
+              ;;[:li {:className "register-form has-form"}]
+              [:div {:className "row collapse"}
+               [:h3 "Register your account and start posting!"]
+               [:div {:className "large-12 columns"}
+                [:input {:id "register-username" :type "text"
+                         :placeholder "username"
+                         :value (om/get-state owner :username)
+                         :onChange #(handle-change % owner :username)
+                         }]]
+               [:div {:className "large-12 columns"}
+                [:input {:id "register-email" :type "text"
+                         :placeholder "email"
+                         :value (om/get-state owner :email)
+                         :onChange #(handle-change % owner :email)
+                         }]]
+               [:div {:className "large-12 columns"}
+                [:input {:id "register-password" :type "password"
+                         :placeholder "password"
+                         :value (om/get-state owner :password)
+                         :onChange #(handle-change % owner :password)
+                         }]]
+               [:div {:className "large-4 columns"}
+                [:button {:type "button" :className "btn btn-info"
+                          :onClick (fn [e]
+                                     (put! (om/get-state owner :post) 1)
+                                     (put! (om/get-state owner :close-chan) 1)
+                                     false)
+                          }
+                 "Register"]]])))))
 
 (defn user-bar [data owner]
   (reify
@@ -194,19 +161,19 @@
 
                 [:li {:className "has-form"}
                 [:div {:className "row collapse"}
-                 [:div {:class "large-4 columns"}
+                 [:div {:className "large-4 columns"}
                   [:input {:id "login-username" :type "text"
                            :placeholder "username"
                            ;:value (om/get-state owner :username)
                            ;:onChange #(handle-change % owner :username)
                            }]]
-                 [:div {:class "large-4 columns"}
+                 [:div {:className "large-4 columns"}
                   [:input {:id "login-password"
                            :placeholder "password"
                            ;:value (om/get-state owner :password)
                            ;:onChange #(handle-change % owner :password)
                            }]]
-                 [:div {:class "large-4 columns"}
+                 [:div {:className "large-4 columns"}
                   [:button {:type "button" :className "btn btn-info"
                            ;:onClick (fn [e] (put!(om/get-state owner :post) 1) false)
                             }
@@ -232,27 +199,6 @@
 ;;               (om/build user-bar data)]
             ]))))
 
-[:li {:className "has-form"}
-                [:div {:className "row collapse"}
-                 [:div {:class "large-4 columns"}
-                  [:input {:id "login-username" :type "text"
-                           :placeholder "username"
-                           ;:value (om/get-state owner :username)
-                           ;:onChange #(handle-change % owner :username)
-                           }]]
-                 [:div {:class "large-4 columns"}
-                  [:input {:id "login-password"
-                           :placeholder "password"
-                           ;:value (om/get-state owner :password)
-                           ;:onChange #(handle-change % owner :password)
-                           }]]
-                 [:div {:class "large-4 columns"}
-                  [:button {:type "button" :className "btn btn-info"
-                           ;:onClick (fn [e] (put!(om/get-state owner :post) 1) false)
-                            }
-                   "Login"]]
-                 ]]
-
 (defn unescape-html
   "change html character entities into special characters"
   [text]
@@ -276,8 +222,6 @@
 
 (println app-state)
 
-(swap! app-state assoc :modal :basic)
-
 (defn basic-modal [data owner]
   (reify
     om/IRender
@@ -297,7 +241,7 @@
   [cursor owner {:keys [modal-view]}]
   (reify
     om/IInitState
-    (init-state[_]
+    (init-state [_]
       {:close-chan (chan)})
     om/IWillMount
     (will-mount [_]
@@ -323,6 +267,48 @@
                         {:init-state {:close-chan
                                       (om/get-state owner :close-chan)}})]]))))
 
+(defn submit-post [title text]
+  (println "submit post")
+  (println title)
+  (println text))
+
+(defn submit-form [data owner opts]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:submit-chan (chan) :title "" :text ""})
+    om/IWillMount
+    (will-mount [_]
+      (let [submit-chan (om/get-state owner :submit-chan)]
+        (go (while true
+              (<! submit-chan)
+              (println "submitting post")
+              (POST "/submit-post"
+                    {:response-format :transit
+                     :params {"title" (om/get-state owner :title)
+                              "text" (om/get-state owner :text)}
+                     :handler (fn [resp]
+                                (println "submit-form returned")
+                                (println resp)
+                                (let [resp (clojure.walk/keywordize-keys resp)]
+                                  (println resp)))})))))
+    om/IRender
+    (render [this]
+      (html [:form {:onSubmit (fn [e]
+                                (go (>! (om/get-state owner :submit-chan) 1))
+                                (.preventDefault e)
+                                false)}
+             [:div {:className "row"}
+              [:div {:className "large-12 columns"}
+               [:label "Submit a post:"]
+               [:input {:type "text" :placeholder "title" :name "post-title"
+                        :value (om/get-state owner :title)
+                        :onChange #(handle-change % owner :title)}]
+               [:textarea {:placeholder "text" :name "post-text"
+                           :value (om/get-state owner :text)
+                           :onChange #(handle-change % owner :text)}]
+               [:button {:type "submit" :className "button"} "submit"]]]]))))
+
 (defn app [data owner opts]
   (reify
     om/IRender
@@ -330,6 +316,7 @@
       (println (:modal data))
       (html [:div {:class "app"}
               (om/build header data)
+              (om/build submit-form data)
               (when (:modal data)
                 (om/build modal data
                           {:opts {:modal-view ((:modal data) modal-map)}}))

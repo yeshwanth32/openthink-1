@@ -1,7 +1,7 @@
 from server import app
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
-from db_models import User
+from db_models import User, Post
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -53,3 +53,14 @@ def register():
         return transitify({"error": user})
     login_user(user)
     return transitify({"username": user.username, "id": user.id})
+
+@app.route("/submit-post", methods=["POST"])
+def submit_post():
+    req_data = get_post_data_from_req(request)
+    post = Post.submit_post(current_user,
+                     req_data.get("title"),
+                     req_data.get("text"))
+    if isinstance(post, basestring):
+        return transitify({"error": post})
+    else:
+        return transitify({"success": "posted successfully"})
