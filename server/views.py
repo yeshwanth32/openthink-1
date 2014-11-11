@@ -1,7 +1,7 @@
 from server import app
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
-from db_models import User, Post
+from db_models import User, Post, Relation
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -18,10 +18,20 @@ def writable_current_user():
         return {"username": current_user.username, "id": current_user.id}
     return None
 
+def post_page(post_id):
+    post = Post.query.filter(Post.id==post_id).one()
+    app_state = {
+        "post": post.writeable,
+        "children": [p.writeable for p in post.get_children()],
+        "comments": [c.writeable for c in post.get_comments()],
+        "user": writable_current_user(),
+    }
+    return render_template('base.html', app_state=transitify(app_state))
+
 @app.route('/')
 def index():
     app_state = {"user": writable_current_user()}
-    return render_template('base.html', app_state=transitify(app_state))
+    return post_page(Post.root_post_id())
 
 def get_post_data_from_req(request):
     reader = Reader()
@@ -60,7 +70,10 @@ def submit_post():
     post = Post.submit_post(current_user,
                      req_data.get("title"),
                      req_data.get("text"))
-    if isinstance(post, basestring):
-        return transitify({"error": post})
+    relation = Relation.link_posts(req_data.get('parent', Post.root_post_id()), 
+                                   post, 
+                                   current_user)
+    if isinstance(post, basestring) or isinstance(relation, basestring):
+        return transitify({"error_post": post, "error_relation": relation})
     else:
         return transitify({"success": "posted successfully"})

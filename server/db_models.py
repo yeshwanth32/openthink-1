@@ -1,6 +1,8 @@
 import datetime as dt
+import pytz
 
 from server import app, login_manager
+from server import localsettings as SETTINGS
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
@@ -8,6 +10,26 @@ from flask.ext.login import UserMixin
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt()
+
+def setup_db(drop_tables_first=False):
+    if drop_tables_first:
+        db.drop_all()
+    db.create_all()
+    # create admin user
+    admin_user = User.create(username=SETTINGS.admin_username, 
+                             password=SETTINGS.admin_password,
+                             email=SETTINGS.admin_email)
+    # create root post
+    Post.create(title="Welcome to Openthink!",
+                body="Browse these posts or submit your own!",
+                user=admin_user)
+
+def doc_or_doc_id(docname, value, dict_to_update=None):
+    dict_to_update = dict_to_update or {}
+    if isinstance(value, int):
+        docname += "_id"
+    dict_to_update[docname] = value
+    return dict_to_update 
 
 
 class SurrogatePK(object):
@@ -22,6 +44,15 @@ class CRUDMixin(object):
     """Mixin that adds convenience methods for CRUD (create, read, update, delete)
     operations.
     """
+
+    def set_attr_or_id(self, attrname, **kw):
+        if kw[attrname]:
+            setattr(self, attrname, kw[attrname])
+        elif kw[attrname + "_id"]:
+            setattr(self, attrname + "_id", kw[attrname + "_id"])
+        else: 
+            raise Exception("Missing %s information" % attrname)
+        return self
 
     @classmethod
     def create(cls, **kwargs):
@@ -73,6 +104,14 @@ class User(Model, UserMixin):
         return bcrypt.check_password_hash(self.password, value)
 
     @classmethod
+    def get_admin_user(cls):
+        return cls.query.filter_by(username=SETTINGS.admin_username).first()
+
+    @classmethod
+    def admin_user_id(cls):
+        return 1
+
+    @classmethod
     def login_user(cls, username, password):
         user = cls.query.filter_by(username=username).first()
         if user and user.check_password(password):
@@ -99,13 +138,38 @@ class Post(Model, SurrogatePK):
     user = db.relationship('User', backref=db.backref('posts', lazy='dynamic'))
     time_posted = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
 
-    def __init__(self, title, body, user, time_posted=None):
+    def get_child_relations(self, limit=8):
+        return Relation.query.filter(Relation.parent_id==self.id).limit(limit)
+
+    def get_children(self, limit=8):
+        child_ids = [rel.child_id for rel in self.get_child_relations(limit=limit)]
+        return Post.query.filter(Post.id.in_(child_ids)).all()
+
+    def get_parent_relations(self, limit=8):
+        return Relation.query.filter(Relation.child_id==self.id).limit(limit)
+
+    def get_parents(self, limit=8):
+        parent_ids = [rel.parent_id for rel in self.get_parent_relations(limit=limit)]
+        return Post.query.filter(Post.id.in_(parent_ids)).all()
+
+    def get_comments(self, limit=10):
+        return Comment.query.filter(Comment.post_id==self.id).limit(limit)
+
+    def __init__(self, title, body, user=None, user_id=None, time_posted=None):
         self.title = title
         self.body = body
         if time_posted is None:
             time_posted = dt.datetime.utcnow()
         self.time_posted = time_posted
-        self.user = user
+        self.set_attr_or_id("user", user=user, user_id=user_id)
+
+    @classmethod
+    def get_root_post(cls):
+        return cls.query.first()
+
+    @classmethod
+    def root_post_id(cls):
+        return 1
 
     @classmethod
     def submit_post(cls, user, title, text):
@@ -113,11 +177,18 @@ class Post(Model, SurrogatePK):
             return cls.create(title=title, body=text, user=user)
         return "missing data"
 
+    @property
+    def writeable(self):
+        attrs = ("title", "body", "user_id", "time_posted")
+        ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
+        ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
+        return ret_dict
+
     def __repr__(self):
         return '<Post %r>' % self.title
 
 
-class Relation(db.Model, SurrogatePK):
+class Relation(Model, SurrogatePK):
     __tablename__ = 'relations'
     parent_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
     parent = db.relationship('Post', foreign_keys=[parent_id],
@@ -130,18 +201,30 @@ class Relation(db.Model, SurrogatePK):
     time_linked = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
 
 
-    def __init__(self, parent, child, linked_by, time_linked=None):
-        self.parent = parent
-        self.child = child
-        self.linked_by = linked_by
+    def __init__(self, parent=None, parent_id=None, child=None, child_id=None, 
+                 linked_by=None, linked_by_id=None, time_linked=None):
+        self.set_attr_or_id("parent", parent=parent, parent_id=parent_id)
+        self.set_attr_or_id("child", child=child, child_id=child_id)
+        self.set_attr_or_id("linked_by", linked_by=linked_by, linked_by_id=linked_by_id)
         if time_linked is None:
             time_linked = dt.datetime.utcnow()
         self.time_linked = time_linked
 
+    @classmethod
+    def link_posts(cls, parent, child, user):
+        if not (parent and child and user):
+            return "missing data"
+
+        kw = {}
+        kw = doc_or_doc_id("parent", parent, kw)
+        kw = doc_or_doc_id("child", child, kw)
+        kw = doc_or_doc_id("linked_by", user, kw)
+        return cls.create(**kw)
+
     def __repr__(self):
         return '<Relation %r>' % self.id
 
-class Comment(db.Model, SurrogatePK):
+class Comment(Model, SurrogatePK):
     __tablename__ = 'comments'
     body = db.Column(db.Text)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
@@ -157,6 +240,13 @@ class Comment(db.Model, SurrogatePK):
         if time_posted is None:
             time_posted = dt.datetime.utcnow()
         self.time_posted = time_posted
+
+    @property
+    def writeable(self):
+        attrs = ("body", "post_id", "user_id", "time_posted")
+        ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
+        ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
+        return ret_dict
 
     def __repr__(self):
         return '<Comment %r>' % self.body

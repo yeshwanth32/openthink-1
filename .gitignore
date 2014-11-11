@@ -5,4 +5,5 @@
 extra/
 openthink-env/
 server/static/
+server/localsettings.py
 client/target/
