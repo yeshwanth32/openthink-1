@@ -1,7 +1,7 @@
 from server import app
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
-from db_models import User, Post, Relation
+from db_models import User, Post, Relation, Comment
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -18,6 +18,7 @@ def writable_current_user():
         return {"username": current_user.username, "id": current_user.id}
     return None
 
+@app.route('/post/<int:post_id>')
 def post_page(post_id):
     post = Post.query.filter(Post.id==post_id).one()
     app_state = {
@@ -77,3 +78,12 @@ def submit_post():
         return transitify({"error_post": post, "error_relation": relation})
     else:
         return transitify({"success": "posted successfully"})
+
+@app.route("/post/<int:post_id>/comment", methods=["POST"])
+def submit_comment(post_id):
+    req_data = get_post_data_from_req(request)
+    comment = Comment.submit_comment(current_user, post_id, req_data.get('body'))
+    if isinstance(comment, basestring):
+        return transitify({"error": comment})
+    post = Post.query.filter(Post.id==post_id).one()
+    return transitify({"comments": [c.writeable for c in post.get_comments()]})

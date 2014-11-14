@@ -154,8 +154,8 @@
     om/IRender
     (render [this]
       (html (if (:user data)
-                    [:div (str "logged in as " (get-in data [:user :username]))
-                      [:div (om/build logout-button data)]]
+                    [:li (str "logged in as " (get-in data [:user :username]))
+                     [:span (om/build logout-button data)]]
 
                     (om/build login-form data))))))
 
@@ -309,14 +309,154 @@
                            :onChange #(handle-change % owner :text)}]
                [:button {:type "submit" :className "button"} "submit"]]]]))))
 
+(defn post-view [post owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:div {:className "post large-12"}
+             [:h4 [:strong (:title post)]]
+             [:hr]
+             [:div (:body post)]
+             [:hr]]))))
+
+(defn children-cursor []
+  (om/ref-cursor (:children (om/root-cursor app-state))))
+
+(defn comments-cursor []
+  (om/ref-cursor (:comments (om/root-cursor app-state))))
+
+(defn child-view [child owner]
+  (reify
+    om/IRender
+    (render [_]
+      (html [:div {:className "large-6 columns"}
+             [:h5 (:title child)]
+             [:div (:body child)]]))))
+
+(defn children-view [data owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [children (children-cursor)
+            child-pairs (partition-all 2 children)]
+        (html [:div {:className "children-view"}
+               (if (empty? child-pairs)
+                 [:div "No children"]
+                 (for [child-pair (take 2 child-pairs)]
+                   [:div {:className "row"}
+                    (for [child child-pair]
+                      (om/build child-view child))]))
+               [:hr]])))))
+
+(defn comment-view [comment owner]
+  (reify
+    om/IRender
+    (render [_]
+      (html [:div {:className "comment row"}
+             (:body comment)]))))
+
+(defn comment-form [data owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:comment-chan (chan) :body ""})
+    om/IWillMount
+    (will-mount [_]
+      (let [comment-chan (om/get-state owner :comment-chan)]
+        (go (while true
+              (<! comment-chan)
+              (println "making comment")
+              (POST (str "post/" (get-in data [:post :id]) "/comment")
+                    {:response-format :transit
+                     :params {"body" (om/get-state owner :body)}
+                     :handler (fn [resp]
+                                (println "comment-form returned")
+                                (println resp)
+                                (let [resp (clojure.walk/keywordize-keys resp)]
+                                  (when-not (contains? resp :error)
+                                    (om/transact! data #(merge % resp)))))})))))
+    om/IRender
+    (render [this]
+      (html [:form {:onSubmit (fn [e]
+                                (go (>! (om/get-state owner :comment-chan) 1))
+                                (.preventDefault e)
+                                false)}
+             [:div {:className "row"}
+              [:div {:className "large-8 columns"}
+               [:label "Submit a comment:"]
+               [:textarea {:placeholder "text" :name "comment-body"
+                           :value (om/get-state owner :body)
+                           :onChange #(handle-change % owner :body)}]
+               [:button {:type "submit" :className "button"} "comment"]]]]))))
+
+
+(defn comments-view [data owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [comments (comments-cursor)]
+        (html [:div {:className "comments-view"}
+               [:h4 "Comments:"]
+               (for [comment comments]
+                 (om/build comment-view comment))
+               (om/build comment-form data)])))))
+
+(defn submit-form [data owner opts]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:submit-chan (chan) :title "" :text ""})
+    om/IWillMount
+    (will-mount [_]
+      (let [submit-chan (om/get-state owner :submit-chan)]
+        (go (while true
+              (<! submit-chan)
+              (println "submitting post")
+              (POST "/submit-post"
+                    {:response-format :transit
+                     :params {"title" (om/get-state owner :title)
+                              "text" (om/get-state owner :text)}
+                     :handler (fn [resp]
+                                (println "submit-form returned")
+                                (println resp)
+                                (let [resp (clojure.walk/keywordize-keys resp)]
+                                  (println resp)))})))))
+    om/IRender
+    (render [this]
+      (html [:form {:onSubmit (fn [e]
+                                (go (>! (om/get-state owner :submit-chan) 1))
+                                (.preventDefault e)
+                                false)}
+             [:div {:className "row"}
+              [:div {:className "large-12 columns"}
+               [:label "Submit a post:"]
+               [:input {:type "text" :placeholder "title" :name "post-title"
+                        :value (om/get-state owner :title)
+                        :onChange #(handle-change % owner :title)}]
+               [:textarea {:placeholder "text" :name "post-text"
+                           :value (om/get-state owner :text)
+                           :onChange #(handle-change % owner :text)}]
+               [:button {:type "submit" :className "button"} "submit"]]]]))))
+
+(defn body [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:div {:className "post-wrapper row"}
+             (om/build post-view (:post data))
+             (om/build children-view data)
+             (om/build comments-view data)
+             ]))))
+
 (defn app [data owner opts]
   (reify
     om/IRender
     (render [this]
       (println (:modal data))
-      (html [:div {:class "app"}
+      (html [:div {:className "app"}
               (om/build header data)
               (om/build submit-form data)
+              (om/build body data)
               (when (:modal data)
                 (om/build modal data
                           {:opts {:modal-view ((:modal data) modal-map)}}))

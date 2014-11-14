@@ -179,7 +179,7 @@ class Post(Model, SurrogatePK):
 
     @property
     def writeable(self):
-        attrs = ("title", "body", "user_id", "time_posted")
+        attrs = ("id", "title", "body", "user_id", "time_posted")
         ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
         return ret_dict
@@ -233,13 +233,24 @@ class Comment(Model, SurrogatePK):
     user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
     time_posted = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
 
-    def __init__(self, body, post, user, time_posted=None):
+    def __init__(self, body, post=None, post_id=None, 
+                 user=None, user_id=None, time_posted=None):
         self.body = body
-        self.post = post
-        self.user = user
+        self.set_attr_or_id("post", post=post, post_id=post_id)
+        self.set_attr_or_id("user", user=user, user_id=user_id)
         if time_posted is None:
             time_posted = dt.datetime.utcnow()
         self.time_posted = time_posted
+
+    @classmethod
+    def submit_comment(cls, user, post, body):
+        if not (user and post and body):
+            return "missing data"
+
+        kw = {"body": body}
+        kw = doc_or_doc_id("user", user, kw)
+        kw = doc_or_doc_id("post", post, kw)
+        return cls.create(**kw)
 
     @property
     def writeable(self):
