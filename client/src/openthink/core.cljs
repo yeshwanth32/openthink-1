@@ -159,27 +159,6 @@
 
                     (om/build login-form data))))))
 
-                [:li {:className "has-form"}
-                [:div {:className "row collapse"}
-                 [:div {:className "large-4 columns"}
-                  [:input {:id "login-username" :type "text"
-                           :placeholder "username"
-                           ;:value (om/get-state owner :username)
-                           ;:onChange #(handle-change % owner :username)
-                           }]]
-                 [:div {:className "large-4 columns"}
-                  [:input {:id "login-password"
-                           :placeholder "password"
-                           ;:value (om/get-state owner :password)
-                           ;:onChange #(handle-change % owner :password)
-                           }]]
-                 [:div {:className "large-4 columns"}
-                  [:button {:type "button" :className "btn btn-info"
-                           ;:onClick (fn [e] (put!(om/get-state owner :post) 1) false)
-                            }
-                   "Login"]]
-                 ]]
-
 (defn header [data owner]
   (reify
     om/IRender
@@ -190,6 +169,9 @@
                [:h1 [:a {:href "#"} "OpenThink"]]]]
 
              [:section {:className "top-bar-section"}
+              [:ul {:className "left"}
+               [:button {:onClick #(om/update! data :modal :new-post)}
+                "Create a new post"]]
               [:ul {:className "right"}
                [:li {:className "divider"}]
                (om/build user-bar data)
@@ -227,50 +209,6 @@
     om/IRender
     (render [this]
       (html [:h2 "some modal txt"]))))
-
-(def modal-map {:basic basic-modal
-                :register register-form})
-
-(defn close-modal []
-  (println "modal should be closing")
-  (swap! app-state dissoc :modal))
-
-(defn modal
-  "reusable modal component.
-  modal-view is the component that should be rendered as a modal"
-  [cursor owner {:keys [modal-view]}]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:close-chan (chan)})
-    om/IWillMount
-    (will-mount [_]
-      (let [close-chan (om/get-state owner :close-chan)]
-        (go-loop []
-          (let [_ (<! close-chan)]
-            (close-modal)))))
-    om/IDidMount
-    (did-mount [_]
-      (let [outside-clicks (listen (sel1 :.reveal-modal-bg) "click")]
-        (go-loop []
-          (let [_ (<! outside-clicks)]
-            (close-modal)))))
-    om/IRender
-    (render [_]
-      (html [:div
-             [:div {:className "reveal-modal-bg"
-                    :style #js {:display "block"}}]
-             [:div {:id "myModal" :className "reveal-modal open"
-                    :style #js {:visibility "visible" :display "block"
-                               :top "88px" :opacity 1}}
-              (om/build modal-view cursor
-                        {:init-state {:close-chan
-                                      (om/get-state owner :close-chan)}})]]))))
-
-(defn submit-post [title text]
-  (println "submit post")
-  (println title)
-  (println text))
 
 (defn submit-form [data owner opts]
   (reify
@@ -366,7 +304,7 @@
         (go (while true
               (<! comment-chan)
               (println "making comment")
-              (POST (str "post/" (get-in data [:post :id]) "/comment")
+              (POST (str "/post/" (get-in data [:post :id]) "/comment")
                     {:response-format :transit
                      :params {"body" (om/get-state owner :body)}
                      :handler (fn [resp]
@@ -448,6 +386,46 @@
              (om/build comments-view data)
              ]))))
 
+(def modal-map {:basic basic-modal
+                :new-post submit-form
+                :register register-form})
+
+(defn close-modal []
+  (println "modal should be closing")
+  (swap! app-state dissoc :modal))
+
+(defn modal
+  "reusable modal component.
+  modal-view is the component that should be rendered as a modal"
+  [cursor owner {:keys [modal-view]}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:close-chan (chan)})
+    om/IWillMount
+    (will-mount [_]
+      (let [close-chan (om/get-state owner :close-chan)]
+        (go-loop []
+          (let [_ (<! close-chan)]
+            (close-modal)))))
+    om/IDidMount
+    (did-mount [_]
+      (let [outside-clicks (listen (sel1 :.reveal-modal-bg) "click")]
+        (go-loop []
+          (let [_ (<! outside-clicks)]
+            (close-modal)))))
+    om/IRender
+    (render [_]
+      (html [:div
+             [:div {:className "reveal-modal-bg"
+                    :style #js {:display "block"}}]
+             [:div {:id "myModal" :className "reveal-modal open"
+                    :style #js {:visibility "visible" :display "block"
+                               :top "88px" :opacity 1}}
+              (om/build modal-view cursor
+                        {:init-state {:close-chan
+                                      (om/get-state owner :close-chan)}})]]))))
+
 (defn app [data owner opts]
   (reify
     om/IRender
@@ -455,7 +433,7 @@
       (println (:modal data))
       (html [:div {:className "app"}
               (om/build header data)
-              (om/build submit-form data)
+              ;(om/build submit-form data)
               (om/build body data)
               (when (:modal data)
                 (om/build modal data
