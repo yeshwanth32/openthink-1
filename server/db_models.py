@@ -7,6 +7,9 @@ from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import UserMixin
+from sqlalchemy.sql import func
+# from sqlalchemy import and_
+
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt()
@@ -126,11 +129,15 @@ class User(Model, UserMixin):
             return "user already exists"
         return cls.create(username=username, email=email, password=password)
 
+    @property
+    def writeable(self):
+        return {"username": self.username, "id": self.id}
+
     def __repr__(self):
         return '<User({username!r})>'.format(username=self.username)
 
 
-class Post(Model, SurrogatePK):
+class Post(Model):
     __tablename__ = 'posts'
     title = db.Column(db.String(140))
     body = db.Column(db.Text)
@@ -188,7 +195,7 @@ class Post(Model, SurrogatePK):
         return '<Post %r>' % self.title
 
 
-class Relation(Model, SurrogatePK):
+class Relation(Model):
     __tablename__ = 'relations'
     parent_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
     parent = db.relationship('Post', foreign_keys=[parent_id],
@@ -221,10 +228,37 @@ class Relation(Model, SurrogatePK):
         kw = doc_or_doc_id("linked_by", user, kw)
         return cls.create(**kw)
 
+    def get_votes(self, limit=None):
+        if limit is None:
+            return Vote.query.filter(Vote.rel_id==self.id)
+        return Vote.query.filter(Vote.rel_id==self.id).limit(limit)
+
+    @property
+    def votecount(self):
+        return self.get_votes().with_entities(func.sum(Vote.value)).first()[0]
+
+    @property
+    def writeable(self):
+        attrs = ("id", "parent_id", "child_id", "linked_by", "time_linked", "votecount")
+        ret_dict = {k: getattr(self, k) for k in attrs}
+        ret_dict["time_linked"] = pytz.utc.localize(ret_dict["time_linked"])
+        ret_dict["linked_by"] = ret_dict["linked_by"].writeable
+        return ret_dict
+
+    def writeable_with_vote_info(self, user=None):
+        vote_value = 0
+        if user is None:
+            return dict(list(self.writeable.items()) + [("user_vote_value", vote_value)])
+        user_id = user if isinstance(user, int) else user.id
+        vote = Vote.query.filter((Vote.rel_id==self.id) & (Vote.user_id==user_id)).first()
+        if vote:
+            vote_value = vote.value
+        return dict(list(self.writeable.items()) + [("user_vote_value", vote_value)])
+
     def __repr__(self):
         return '<Relation %r>' % self.id
 
-class Comment(Model, SurrogatePK):
+class Comment(Model):
     __tablename__ = 'comments'
     body = db.Column(db.Text)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
@@ -261,6 +295,35 @@ class Comment(Model, SurrogatePK):
 
     def __repr__(self):
         return '<Comment %r>' % self.body
+
+class Vote(CRUDMixin, db.Model):
+    __tablename__ = 'votes'
+    rel_id = db.Column(db.Integer, db.ForeignKey('relations.id'), primary_key=True)
+    rel = db.relationship('Relation', backref=db.backref('votes', lazy='dynamic'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    user = db.relationship('User', backref=db.backref('votes', lazy='dynamic'))
+    value = db.Column(db.Integer)
+
+    def __init__(self, value=1, rel=None, rel_id=None, user=None, user_id=None):
+        self.set_attr_or_id("rel", rel=rel, rel_id=rel_id)
+        self.set_attr_or_id("user", user=user, user_id=user_id)
+        self.value = value
+
+    @classmethod
+    def submit_vote(cls, user, rel, upvote=True):
+        if not (user and rel):
+            return "missing data"
+
+        user_id = user if isinstance(user, int) else user.id
+        rel_id = rel if isinstance(rel, int) else rel.id
+        value = 1 if upvote else -1
+        vote = cls.query.filter_by(user_id=user_id).first()
+        if vote:
+            return vote.update(value=value)
+        return cls.create(user_id=user_id, rel_id=rel_id, value=value)
+
+    def __repr__(self):
+        return '<Vote user:%r rel:%r>' % (self.user_id, self.rel_id)
 
 @login_manager.user_loader
 def load_user(userid):
