@@ -326,6 +326,8 @@ class Vote(CRUDMixin, db.Model):
         value = 1 if value == 1 else -1
         vote = cls.query.filter((Vote.user_id==user_id) & (Vote.rel_id==rel_id)).first()
         if vote:
+            if vote.value == value:
+                return vote.delete()
             return vote.update(value=value)
         return cls.create(user_id=user_id, rel_id=rel_id, value=value)
 
