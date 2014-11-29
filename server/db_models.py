@@ -145,8 +145,11 @@ class Post(Model):
     user = db.relationship('User', backref=db.backref('posts', lazy='dynamic'))
     time_posted = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
 
-    def get_child_relations(self, limit=8):
-        return Relation.query.filter(Relation.parent_id==self.id).limit(limit)
+    def get_child_relations(self, limit=8, ids_only=False):
+        if not ids_only:
+            return Relation.query.filter(Relation.parent_id==self.id).limit(limit)
+        return Relation.query.with_entities(Relation.id) \
+                             .filter(Relation.parent_id==self.id).limit(limit)
 
     def get_children(self, limit=8):
         child_ids = [rel.child_id for rel in self.get_child_relations(limit=limit)]
@@ -190,6 +193,10 @@ class Post(Model):
         ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
         return ret_dict
+
+    def writeable_with_children(self, limit=8):
+        child_rel_ids = [r[0] for r in self.get_child_relations(limit=limit, ids_only=True)]
+        return dict(list(self.writeable.items()) + [("child_rel_ids", child_rel_ids)])
 
     def __repr__(self):
         return '<Post %r>' % self.title
@@ -310,20 +317,20 @@ class Vote(CRUDMixin, db.Model):
         self.value = value
 
     @classmethod
-    def submit_vote(cls, user, rel, upvote=True):
+    def submit_vote(cls, user, rel, value=True):
         if not (user and rel):
             return "missing data"
 
         user_id = user if isinstance(user, int) else user.id
         rel_id = rel if isinstance(rel, int) else rel.id
-        value = 1 if upvote else -1
-        vote = cls.query.filter_by(user_id=user_id).first()
+        value = 1 if value == 1 else -1
+        vote = cls.query.filter((Vote.user_id==user_id) & (Vote.rel_id==rel_id)).first()
         if vote:
             return vote.update(value=value)
         return cls.create(user_id=user_id, rel_id=rel_id, value=value)
 
     def __repr__(self):
-        return '<Vote user:%r rel:%r>' % (self.user_id, self.rel_id)
+        return '<Vote user:%r rel:%r value:%s>' % (self.user_id, self.rel_id, self.value)
 
 @login_manager.user_loader
 def load_user(userid):

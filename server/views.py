@@ -1,7 +1,7 @@
 from server import app
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
-from db_models import User, Post, Relation, Comment
+from db_models import User, Post, Relation, Comment, Vote
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -18,31 +18,25 @@ def writable_current_user():
         return current_user.writeable
     return None
 
+def dict_by_id(alist, key="id"):
+    return dict([(item[key], item) for item in alist])
+
 @app.route('/post/<int:post_id>')
 def post_page(post_id):
     post = Post.query.filter(Post.id==post_id).one()
+    rels = post.get_child_relations()
+    child_ids = [rel.child_id for rel in rels]
+    children = Post.query.filter(Post.id.in_(child_ids)).all()
+    posts = [p.writeable for p in children] + [post.writeable_with_children()]
+    rels = [r.writeable_with_vote_info(current_user) for r in rels]
     app_state = {
-        "post": post.writeable,
-        "children": [p.writeable for p in post.get_children()],
+        "current_post": post.id,
+        "posts": dict_by_id(posts),
+        "rels": dict_by_id(rels),
         "comments": [c.writeable for c in post.get_comments()],
         "user": writable_current_user(),
     }
     return render_template('base.html', app_state=transitify(app_state))
-
-# @app.route('/post/<int:post_id>')
-# def post_page(post_id):
-#     post = Post.query.filter(Post.id==post_id).one()
-#     rels = post.get_child_relations()
-#     child_ids = [rel.child_id for rel in rels]
-#     children = Post.query.filter(Post.id.in_(child_ids)).all()
-#     app_state = {
-#         "current_post": post.id,
-#         "posts": [p.writeable for p in children.append(post)],
-#         "rels": [r.writeable_with_vote_info(current_user) for r in rels],
-#         "comments": [c.writeable for c in post.get_comments()],
-#         "user": writable_current_user(),
-#     }
-#     return render_template('base.html', app_state=transitify(app_state))
 
 
 @app.route('/')
@@ -107,7 +101,8 @@ def submit_comment(post_id):
 @app.route("/vote", methods=["POST"])
 def submit_vote():
     req_data = get_post_data_from_req(request)
-    vote = Vote.submit_vote(current_user, req_data.get('rel_id'), int(req_data.get('value')))
+    vote = Vote.submit_vote(current_user, int(req_data.get('rel_id')), int(req_data.get('value')))
     if isinstance(vote, basestring):
         return transitify({"error": vote})
-    return transitify({"success": "votes worked"})
+    rel = Relation.query.filter(Relation.id==int(req_data.get('rel_id'))).one()
+    return transitify({"rel": rel.writeable_with_vote_info()})

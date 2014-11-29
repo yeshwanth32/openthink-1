@@ -176,9 +176,6 @@
                [:li {:className "divider"}]
                (om/build user-bar data)
                ]]
-;;              [:div {:className "small-6 columns"} "test"]
-;;              [:div {:className "small-6 columns"}
-;;               (om/build user-bar data)]
             ]))))
 
 (defn unescape-html
@@ -247,36 +244,85 @@
                            :onChange #(handle-change % owner :text)}]
                [:button {:type "submit" :className "button"} "submit"]]]]))))
 
-(defn post-view [post owner]
-  (reify
-    om/IRender
-    (render [this]
-      (html [:div {:className "post large-12"}
-             [:h4 [:strong (:title post)]]
-             [:hr]
-             [:div (:body post)]
-             [:hr]]))))
 
-(defn children-cursor []
-  (om/ref-cursor (:children (om/root-cursor app-state))))
+(def select-values (comp vals select-keys))
+
+;; cursors
+
+(defn current-post []
+  (let [root-cursor (om/root-cursor app-state)]
+    (om/ref-cursor (get (:posts root-cursor) (:current_post root-cursor)))))
+
+(defn child-rels []
+  (let [root-cursor (om/root-cursor app-state)
+        child-rel-ids (:child_rel_ids (current-post))]
+    (om/ref-cursor (select-values (:rels root-cursor) child-rel-ids))))
+
+(current-post)
+(defn post-from-rel [rel]
+  (let [posts (:posts (om/root-cursor app-state))]
+    (om/ref-cursor (get posts (:child_id rel)))))
 
 (defn comments-cursor []
   (om/ref-cursor (:comments (om/root-cursor app-state))))
 
-(defn child-view [child owner]
+
+(defn post-view [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (let [post (current-post)]
+        (html [:div {:className "post large-12"}
+               [:h4 [:strong (:title post)]]
+               [:hr]
+               [:div (:body post)]
+               [:hr]])))))
+
+@app-state
+
+(defn vote-btn [rel owner {:keys [vote-value vote-txt] :as opts}]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:a
+             {:href "#"
+              :onClick (fn [_]
+                         (POST "/vote"
+                           {:response-format :transit
+                            :params {"value" vote-value, "rel_id" (:id rel)}
+                            :handler (fn [resp]
+                                       (println resp)
+                                       (let [resp (clojure.walk/keywordize-keys resp)]
+                                         (when-not (contains? resp :error)
+                                           (om/update! rel (:rel resp)))))})
+                         false)}
+             vote-txt]))))
+
+(defn child-view [rel owner]
   (reify
     om/IRender
     (render [_]
-      (html [:div {:className "large-6 columns"}
-             [:h5 (:title child)]
-             [:div (:body child)]]))))
+      (let [child-post (post-from-rel rel)]
+        (html [:div {:className "large-6 columns"}
+               [:div {:className "row"}
+                [:div {:className "large-1 columns"}
+                 [:h4 (or (:votecount rel) 0)]
+                 [:div (om/build vote-btn rel {:opts {:vote-value 1 :vote-txt "up"}
+                                               :key (str "upvote-" (:id rel))})]
+                 [:div (om/build vote-btn rel {:opts {:vote-value -1 :vote-txt "down"}
+                                               :key (str "downvote-" (:id rel))})]]
+                [:div {:className "large-11 columns"}
+                 [:h5 (:title child-post)]
+                 [:div (:body child-post)]]]])))))
+
 
 (defn children-view [data owner]
   (reify
     om/IRender
     (render [_]
-      (let [children (children-cursor)
-            child-pairs (partition-all 2 children)]
+      (let [child-rel-ids (:child_rel_ids (current-post))
+            child-rels (select-values (:rels data) child-rel-ids)
+            child-pairs (partition-all 2 (filter identity child-rels))]
         (html [:div {:className "children-view"}
                (if (empty? child-pairs)
                  [:div "No children"]
@@ -381,7 +427,7 @@
     om/IRender
     (render [this]
       (html [:div {:className "post-wrapper row"}
-             (om/build post-view (:post data))
+             (om/build post-view data)
              (om/build children-view data)
              (om/build comments-view data)
              ]))))
@@ -433,27 +479,25 @@
       (println (:modal data))
       (html [:div {:className "app"}
               (om/build header data)
-              ;(om/build submit-form data)
+              (om/build submit-form data)
               (om/build body data)
               (when (:modal data)
                 (om/build modal data
                           {:opts {:modal-view ((:modal data) modal-map)}}))
              ]))))
 
-;; <div class="reveal-modal-bg" style="display: block;"></div>
-;; <div id="myModal" class="reveal-modal open" data-reveal="" style="visibility: visible; display: block; top: 88px; opacity: 1;">
-;;   <h2>Awesome. I have it.</h2>
-;;   <p class="lead">Your couch.  It is mine.</p>
-;;   <p>I'm a cool paragraph that lives inside of an even cooler modal. Wins!</p>
-;;   <a class="close-reveal-modal">×</a>
-;; </div>
 
 (defn start [target state app]
   (om/root app state {:target target}))
 
+(sel1 :#app)
+
 (start (sel1 :#app) app-state app)
 
 (:modal @app-state)
+(swap! app-state assoc :current_post 1)
+
+@app-state
 
 
 ;; Modal component should take the component to render as a parameter.
