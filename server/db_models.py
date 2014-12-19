@@ -297,7 +297,7 @@ class Comment(Model):
 
     @property
     def writeable(self, replace_newline=True):
-        attrs = ("body", "post_id", "user", "time_posted")
+        attrs = ("id", "body", "post_id", "user", "time_posted")
         ret_dict = {k: getattr(self, k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
         ret_dict["user"] = ret_dict["user"].writeable

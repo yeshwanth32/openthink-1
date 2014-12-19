@@ -235,7 +235,7 @@
       (html [:nav {:className "top-bar page-header"}
              [:ul {:className "title-area"}  ;; Logo
               [:li {:className "name"}
-               [:h1 [:a {:href "#"} "OpenThink"]]]]
+               [:h1 [:a {:href "/"} "OpenThink"]]]]
 
              [:section {:className "top-bar-section"}
               [:ul {:className "left"}
@@ -293,8 +293,7 @@
         (html [:div {:className "post row"}
                [:h4 [:strong (:title post)]]
                [:hr]
-               [:div (:body post)]
-               [:hr]])))))
+               [:div (render-text (:body post))]])))))
 
 (defn vote-btn [rel owner {:keys [vote-value vote-txt] :as opts}]
   (reify
@@ -363,7 +362,7 @@
   (reify
     om/IRender
     (render [_]
-      (html [:div {:className "comment"}
+      (html [:div {:className "comment" :id (str "comment-" (:id comment))}
              [:hr]
              [:span {:className "comment-userbit"}
               [:strong {:className "comment-user"}
@@ -402,8 +401,8 @@
                                 false)}
              [:div {:className "row"}
               [:div {:className "large-8 columns"}
-               [:label "Submit a comment:"]
-               [:textarea {:placeholder "text" :name "comment-body"
+               ;[:label "Submit a comment:"]
+               [:textarea {:placeholder "Post a comment" :name "comment-body"
                            :value (om/get-state owner :body)
                            :onChange #(handle-change % owner :body)}]
                [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
@@ -415,13 +414,14 @@
     (render [_]
       (let [comments (comments-cursor)]
         (html [:div {:className "comments-view row"}
-               [:h4 "Comments:"]
                (if (:user data)
                  (om/build comment-form data)
                  [:strong "You must be logged in to comment a post"])
-
-               (for [comment comments]
-                 (om/build comment-view comment))])))))
+               (if-not (empty? comments)
+                 [:span [:h4 "Comments:"]
+                  (for [comment comments]
+                    (om/build comment-view comment))]
+                 "No comments yet")])))))
 
 (defn submit-form [data owner opts]
   (reify

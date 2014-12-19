@@ -5,6 +5,6 @@
 extra/
 openthink-env/
 server/static/
-!server/static/client/scss
+server/style/js
 server/localsettings.py
 client/target/
