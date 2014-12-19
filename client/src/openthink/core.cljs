@@ -16,6 +16,9 @@
 
 (println "Hello world!")
 
+
+;; some utilities
+
 (defn listen [el type]
   (let [out (chan)]
     (events/listen el type
@@ -24,6 +27,71 @@
 
 (defn handle-change [e owner field]
   (om/set-state! owner field (.. e -target -value)))
+
+(defn date [dt]
+  (remove-last (str dt) 15))
+
+(defn remove-last [s n]
+  (let [end-index (- (count s) n)]
+    (subs s 0 end-index)))
+
+(defn split-text [s]
+  (remove empty? (str/split s #"\\n|\n")))
+
+(defn render-text [s]
+  (for [p (split-text s)]
+    [:p p]))
+
+(def select-values (comp vals select-keys))
+
+(defn unescape-html
+  "change html character entities into special characters"
+  [text]
+  (-> (str text)
+      (clojure.string/replace "&amp;" "&")
+      (clojure.string/replace "&lt;" "<")
+      (clojure.string/replace "&gt;" ">")
+      (clojure.string/replace "&quot;" "\"")
+      (clojure.string/replace "&#34;" "\"")
+      (clojure.string/replace "&#x27;" "'")
+      (clojure.string/replace "&#x2F;" "/")))
+
+
+;; set up app-state
+
+(def app-state
+  (let [init-data js/initial_app_state
+        rdr (t/reader :json)]
+    (->> init-data
+         unescape-html
+         (t/read rdr)
+         clojure.walk/keywordize-keys
+         atom)))
+
+(println app-state)
+
+
+;; cursors
+
+(defn current-post []
+  (let [root-cursor (om/root-cursor app-state)]
+    (om/ref-cursor (get (:posts root-cursor) (:current_post root-cursor)))))
+
+(defn child-rels []
+  (let [root-cursor (om/root-cursor app-state)
+        child-rel-ids (:child_rel_ids (current-post))]
+    (om/ref-cursor (select-values (:rels root-cursor) child-rel-ids))))
+
+(defn post-from-rel [rel]
+  (let [posts (:posts (om/root-cursor app-state))]
+    (om/ref-cursor (get posts (:child_id rel)))))
+
+(defn comments-cursor []
+  (om/ref-cursor (:comments (om/root-cursor app-state))))
+
+
+
+;; user login and register components
 
 (defn login-form [data owner]
   (reify
@@ -149,15 +217,16 @@
                           }
                  "Register"]]])))))
 
+;; top bar components
+
 (defn user-bar [data owner]
   (reify
     om/IRender
     (render [this]
       (html (if (:user data)
-                    [:li (str "logged in as " (get-in data [:user :username]))
-                     [:span (om/build logout-button data)]]
-
-                    (om/build login-form data))))))
+              [:li (str "logged in as " (get-in data [:user :username]))
+               [:span (om/build logout-button data)]]
+              (om/build login-form data))))))
 
 (defn header [data owner]
   (reify
@@ -177,35 +246,6 @@
                (om/build user-bar data)
                ]]
             ]))))
-
-(defn unescape-html
-  "change html character entities into special characters"
-  [text]
-  (-> (str text)
-      (clojure.string/replace "&amp;" "&")
-      (clojure.string/replace "&lt;" "<")
-      (clojure.string/replace "&gt;" ">")
-      (clojure.string/replace "&quot;" "\"")
-      (clojure.string/replace "&#34;" "\"")
-      (clojure.string/replace "&#x27;" "'")
-      (clojure.string/replace "&#x2F;" "/")))
-
-(def app-state
-  (let [init-data js/initial_app_state
-        rdr (t/reader :json)]
-    (->> init-data
-         unescape-html
-         (t/read rdr)
-         clojure.walk/keywordize-keys
-         atom)))
-
-(println app-state)
-
-(defn basic-modal [data owner]
-  (reify
-    om/IRender
-    (render [this]
-      (html [:h2 "some modal txt"]))))
 
 (defn submit-form [data owner opts]
   (reify
@@ -245,40 +285,16 @@
                [:button {:type "submit" :className "button"} "submit"]]]]))))
 
 
-(def select-values (comp vals select-keys))
-
-;; cursors
-
-(defn current-post []
-  (let [root-cursor (om/root-cursor app-state)]
-    (om/ref-cursor (get (:posts root-cursor) (:current_post root-cursor)))))
-
-(defn child-rels []
-  (let [root-cursor (om/root-cursor app-state)
-        child-rel-ids (:child_rel_ids (current-post))]
-    (om/ref-cursor (select-values (:rels root-cursor) child-rel-ids))))
-
-(current-post)
-(defn post-from-rel [rel]
-  (let [posts (:posts (om/root-cursor app-state))]
-    (om/ref-cursor (get posts (:child_id rel)))))
-
-(defn comments-cursor []
-  (om/ref-cursor (:comments (om/root-cursor app-state))))
-
-
 (defn post-view [data owner]
   (reify
     om/IRender
     (render [this]
       (let [post (current-post)]
-        (html [:div {:className "post large-12"}
+        (html [:div {:className "post row"}
                [:h4 [:strong (:title post)]]
                [:hr]
                [:div (:body post)]
                [:hr]])))))
-
-@app-state
 
 (defn vote-btn [rel owner {:keys [vote-value vote-txt] :as opts}]
   (reify
@@ -303,18 +319,30 @@
     om/IRender
     (render [_]
       (let [child-post (post-from-rel rel)]
-        (html [:div {:className "large-6 columns"}
+        (html [:div {:className "child large-12 columns"}
                [:div {:className "row"}
-                [:div {:className "large-1 columns"}
-                 [:h4 (or (:votecount rel) 0)]
-                 [:div (om/build vote-btn rel {:opts {:vote-value 1 :vote-txt "up"}
-                                               :key (str "upvote-" (:id rel))})]
-                 [:div (om/build vote-btn rel {:opts {:vote-value -1 :vote-txt "down"}
-                                               :key (str "downvote-" (:id rel))})]]
-                [:div {:className "large-11 columns"}
-                 [:h5 (:title child-post)]
-                 [:div (:body child-post)]]]])))))
+                [:div {:className "large-2 columns"}
 
+                 ;; vote section
+                 [:div {:className "row"}
+                  [:div {:className "small-4 columns" :style #js {:padding "0px"}}
+                   [:div (om/build vote-btn rel {:opts {:vote-value 1 :vote-txt "▲"}
+                                                 :key (str "upvote-" (:id rel))})]
+                   [:div (om/build vote-btn rel {:opts {:vote-value -1 :vote-txt "▼"}
+                                                 :key (str "downvote-" (:id rel))})]]
+                  [:div {:className "small-8 columns" :style #js {:padding "0px"}}
+                   [:h4 (or (:votecount rel) 0)]]]]
+
+                [:div {:className "large-10 columns"}
+                 [:a {:href (str "/post/" (:id child-post))}
+                  [:strong (:title child-post)]]
+                 [:div (str (subs (:body child-post) 0 80)
+                            (if (> (count (:body child-post)) 80) "..." ""))]
+                 [:span {:className "link-by"}
+                  "linked by "
+                  [:strong (get-in rel [:linked_by :username])]
+                  " on "
+                  (date (:time_linked rel))]]]])))))
 
 (defn children-view [data owner]
   (reify
@@ -326,18 +354,25 @@
         (html [:div {:className "children-view"}
                (if (empty? child-pairs)
                  [:div "No children"]
-                 (for [child-pair (take 2 child-pairs)]
+                 (for [child (filter identity child-rels)]
                    [:div {:className "row"}
-                    (for [child child-pair]
-                      (om/build child-view child))]))
-               [:hr]])))))
+                    (om/build child-view child)]))])))))
+
 
 (defn comment-view [comment owner]
   (reify
     om/IRender
     (render [_]
-      (html [:div {:className "comment row"}
-             (:body comment)]))))
+      (html [:div {:className "comment"}
+             [:hr]
+             [:span {:className "comment-userbit"}
+              [:strong {:className "comment-user"}
+               (get-in comment [:user :username])]
+              [:span {:className "comment-datebit"}
+               (str " | " (date (:time_posted comment)))]]
+             [:div {:className "comment-body"}
+              (render-text (:body comment))]]))))
+
 
 (defn comment-form [data owner]
   (reify
@@ -350,7 +385,7 @@
         (go (while true
               (<! comment-chan)
               (println "making comment")
-              (POST (str "/post/" (get-in data [:post :id]) "/comment")
+              (POST (str "/post/" (:current_post data) "/comment")
                     {:response-format :transit
                      :params {"body" (om/get-state owner :body)}
                      :handler (fn [resp]
@@ -371,7 +406,7 @@
                [:textarea {:placeholder "text" :name "comment-body"
                            :value (om/get-state owner :body)
                            :onChange #(handle-change % owner :body)}]
-               [:button {:type "submit" :className "button"} "comment"]]]]))))
+               [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
 
 
 (defn comments-view [data owner]
@@ -379,11 +414,14 @@
     om/IRender
     (render [_]
       (let [comments (comments-cursor)]
-        (html [:div {:className "comments-view"}
+        (html [:div {:className "comments-view row"}
                [:h4 "Comments:"]
+               (if (:user data)
+                 (om/build comment-form data)
+                 [:strong "You must be logged in to comment a post"])
+
                (for [comment comments]
-                 (om/build comment-view comment))
-               (om/build comment-form data)])))))
+                 (om/build comment-view comment))])))))
 
 (defn submit-form [data owner opts]
   (reify
@@ -420,17 +458,39 @@
                [:textarea {:placeholder "text" :name "post-text"
                            :value (om/get-state owner :text)
                            :onChange #(handle-change % owner :text)}]
-               [:button {:type "submit" :className "button"} "submit"]]]]))))
+               [:button {:type "submit" :className "button tiny"} "submit"]]]]))))
+
+(defn post-section [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:div {:className "post-section medium-7 columns"}
+             (om/build post-view data)
+             (om/build comments-view data)]))))
+
+(defn children-section [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:div {:className "children-section medium-5 columns"}
+             (om/build children-view data)]))))
 
 (defn body [data owner]
   (reify
     om/IRender
     (render [this]
-      (html [:div {:className "post-wrapper row"}
-             (om/build post-view data)
-             (om/build children-view data)
-             (om/build comments-view data)
-             ]))))
+      (html [:div {:className "main-content row"}
+             (om/build post-section data)
+             (om/build children-section data)]))))
+
+
+;; modal components and logic
+
+(defn basic-modal [data owner]
+  (reify
+    om/IRender
+    (render [this]
+      (html [:h2 "some modal txt"]))))
 
 (def modal-map {:basic basic-modal
                 :new-post submit-form
@@ -472,6 +532,8 @@
                         {:init-state {:close-chan
                                       (om/get-state owner :close-chan)}})]]))))
 
+;; build and start application
+
 (defn app [data owner opts]
   (reify
     om/IRender
@@ -479,7 +541,7 @@
       (println (:modal data))
       (html [:div {:className "app"}
               (om/build header data)
-              (om/build submit-form data)
+              ;(om/build submit-form data)
               (om/build body data)
               (when (:modal data)
                 (om/build modal data
@@ -490,20 +552,7 @@
 (defn start [target state app]
   (om/root app state {:target target}))
 
-(sel1 :#app)
-
 (start (sel1 :#app) app-state app)
-
-(:modal @app-state)
-(swap! app-state assoc :current_post 1)
-
-@app-state
-
-
-;; Modal component should take the component to render as a parameter.
-;; It should support dismissing the modal (removing it from the app-state) when a
-;; user clicks outside it. It should also somehow support the modal dismissing itself.
-;; passing a closing channel to allow the component to close the modal
 
 
 

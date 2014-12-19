@@ -29,6 +29,7 @@ def post_page(post_id):
     children = Post.query.filter(Post.id.in_(child_ids)).all()
     posts = [p.writeable for p in children] + [post.writeable_with_children()]
     rels = [r.writeable_with_vote_info(current_user) for r in rels]
+    print "post is %s" % post.id
     app_state = {
         "current_post": post.id,
         "posts": dict_by_id(posts),
@@ -36,6 +37,7 @@ def post_page(post_id):
         "comments": [c.writeable for c in post.get_comments()],
         "user": writable_current_user(),
     }
+    print app_state["comments"]
     return render_template('base.html', app_state=transitify(app_state))
 
 

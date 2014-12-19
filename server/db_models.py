@@ -188,10 +188,12 @@ class Post(Model):
         return "missing data"
 
     @property
-    def writeable(self):
+    def writeable(self, replace_newline=True):
         attrs = ("id", "title", "body", "user_id", "time_posted")
         ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
+        if replace_newline:
+            ret_dict["body"] = ret_dict["body"].replace("\n","\\n")
         return ret_dict
 
     def writeable_with_children(self, limit=8):
@@ -254,7 +256,7 @@ class Relation(Model):
 
     def writeable_with_vote_info(self, user=None):
         vote_value = 0
-        if user is None:
+        if user is None or user.is_anonymous():
             return dict(list(self.writeable.items()) + [("user_vote_value", vote_value)])
         user_id = user if isinstance(user, int) else user.id
         vote = Vote.query.filter((Vote.rel_id==self.id) & (Vote.user_id==user_id)).first()
@@ -294,10 +296,13 @@ class Comment(Model):
         return cls.create(**kw)
 
     @property
-    def writeable(self):
-        attrs = ("body", "post_id", "user_id", "time_posted")
-        ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
+    def writeable(self, replace_newline=True):
+        attrs = ("body", "post_id", "user", "time_posted")
+        ret_dict = {k: getattr(self, k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
+        ret_dict["user"] = ret_dict["user"].writeable
+        if replace_newline:
+            ret_dict["body"] = ret_dict["body"].replace("\n","\\n")
         return ret_dict
 
     def __repr__(self):
