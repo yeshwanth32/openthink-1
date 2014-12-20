@@ -224,7 +224,9 @@
     om/IRender
     (render [this]
       (html (if (:user data)
-              [:li (str "logged in as " (get-in data [:user :username]))
+              [:li {:className "logged-in-as"}
+               [:span
+                    (str "logged in as " (get-in data [:user :username]) " ")]
                [:span (om/build logout-button data)]]
               (om/build login-form data))))))
 
@@ -239,7 +241,8 @@
 
              [:section {:className "top-bar-section"}
               [:ul {:className "left"}
-               [:button {:onClick #(om/update! data :modal :new-post)}
+               [:button {:className "button large"
+                         :onClick #(om/update! data :modal :new-post)}
                 "Create a new post"]]
               [:ul {:className "right"}
                [:li {:className "divider"}]
@@ -334,7 +337,7 @@
 
                 [:div {:className "large-10 columns"}
                  [:a {:href (str "/post/" (:id child-post))}
-                  [:strong (:title child-post)]]
+                  [:strong {:className "child-title"} (:title child-post)]]
                  [:div (str (subs (:body child-post) 0 80)
                             (if (> (count (:body child-post)) 80) "..." ""))]
                  [:span {:className "link-by"}
@@ -351,11 +354,21 @@
             child-rels (select-values (:rels data) child-rel-ids)
             child-pairs (partition-all 2 (filter identity child-rels))]
         (html [:div {:className "children-view"}
+               [:div {:className "row reply-action"}
+                [:button {:onClick #(om/update! data :modal :new-post)
+                          :className "button expand large reply-btn"}
+                 "Post a Reply"]]
                (if (empty? child-pairs)
                  [:div "No children"]
-                 (for [child (filter identity child-rels)]
-                   [:div {:className "row"}
-                    (om/build child-view child)]))])))))
+                 [:span
+                  [:div {:className "row child-sort-section"}
+                   [:select
+                    [:option {:value "top"} "Top"]
+                    [:option {:value "new"} "Newest"]
+                    [:option {:value "hot"} "Hot"]]]
+                  (for [child (filter identity child-rels)]
+                    [:div {:className "row"}
+                     (om/build child-view child)])])])))))
 
 
 (defn comment-view [comment owner]
@@ -400,7 +413,7 @@
                                 (.preventDefault e)
                                 false)}
              [:div {:className "row"}
-              [:div {:className "large-8 columns"}
+              [:div {:className "large-11 columns"}
                ;[:label "Submit a comment:"]
                [:textarea {:placeholder "Post a comment" :name "comment-body"
                            :value (om/get-state owner :body)
@@ -416,12 +429,12 @@
         (html [:div {:className "comments-view row"}
                (if (:user data)
                  (om/build comment-form data)
-                 [:strong "You must be logged in to comment a post"])
+                 [:strong "You must be logged in to comment on a post"])
                (if-not (empty? comments)
                  [:span [:h4 "Comments:"]
                   (for [comment comments]
                     (om/build comment-view comment))]
-                 "No comments yet")])))))
+                 [:div "No comments yet"])])))))
 
 (defn submit-form [data owner opts]
   (reify

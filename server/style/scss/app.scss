@@ -4,22 +4,30 @@
 .children-section {
 	background-color: #F2F3F5;
 	overflow-y: auto;
+	border-left: 1px solid #CED5DE;
+	border-right: 1px solid #CED5DE;
 }
 
 .child {
 	border-bottom: 1px solid #CED5DE;
 }
 
+.child-title {
+	font-size: 125%;
+}
+
 .link-by {
 	font-size: 85%;
-	color: #4C6585;
+	color: scale-color($body-font-color, $lightness: 35%);
 }
 
 .comment-userbit {
 	font-size: 85%;
+	//color: $darker-blue;
 }
 
 .comment-datebit {
+	// color: dark-blue; //
 	color: scale-color($body-font-color, $lightness: 35%);
 }
 
@@ -34,6 +42,15 @@
 	padding-bottom: rem-calc(24);
 }
 
+.reply-btn {
+	//margin: 0;
+}
+
+.logged-in-as {
+	display: table-cell;
+	vertical-align: middle;
+	color: white;
+}
 
 // Or selectively include components
 // @import
