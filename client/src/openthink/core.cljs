@@ -130,7 +130,7 @@
                            :onChange #(handle-change % owner :username)
                            }]]
                  [:div {:className "small-3 columns"}
-                  [:input {:id "login-password"
+                  [:input {:id "login-password" :type "password"
                            :placeholder "password"
                            :value (om/get-state owner :password)
                            :onChange #(handle-change % owner :password)
@@ -142,8 +142,7 @@
                    "Login"]]
                  [:div {:className "small-3 columns inline"}
                    "or "
-                   [:a {:href "#" :onClick (fn [e]
-                                             (om/update! data :modal :register))}
+                   [:a {:href "#" :onClick #(om/update! data :modal :register)}
                     "Register"]]]])))))
 
 (defn logout-button [data owner]
@@ -277,44 +276,6 @@
                (om/build user-bar data)
                ]]
             ]))))
-
-(defn submit-form [data owner opts]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:submit-chan (chan) :title "" :text ""})
-    om/IWillMount
-    (will-mount [_]
-      (let [submit-chan (om/get-state owner :submit-chan)]
-        (go (while true
-              (<! submit-chan)
-              (println "submitting post")
-              (POST "/submit-post"
-                    {:response-format :transit
-                     :params {"title" (om/get-state owner :title)
-                              "text" (om/get-state owner :text)}
-                     :handler (fn [resp]
-                                (println "submit-form returned")
-                                (println resp)
-                                (let [resp (clojure.walk/keywordize-keys resp)]
-                                  (println resp)))})))))
-    om/IRender
-    (render [this]
-      (html [:form {:onSubmit (fn [e]
-                                (go (>! (om/get-state owner :submit-chan) 1))
-                                (.preventDefault e)
-                                false)}
-             [:div {:className "row"}
-              [:div {:className "large-12 columns"}
-               [:label "Submit a post:"]
-               [:input {:type "text" :placeholder "title" :name "post-title"
-                        :value (om/get-state owner :title)
-                        :onChange #(handle-change % owner :title)}]
-               [:textarea {:placeholder "text" :name "post-text"
-                           :value (om/get-state owner :text)
-                           :onChange #(handle-change % owner :text)}]
-               [:button {:type "submit" :className "button"} "submit"]]]]))))
-
 
 (defn post-view [data owner]
   (reify
@@ -486,20 +447,25 @@
                                   (println resp)))})))))
     om/IRender
     (render [this]
-      (html [:form {:onSubmit (fn [e]
-                                (go (>! (om/get-state owner :submit-chan) 1))
-                                (.preventDefault e)
-                                false)}
-             [:div {:className "row"}
-              [:div {:className "large-12 columns"}
-               [:label "Submit a post:"]
-               [:input {:type "text" :placeholder "title" :name "post-title"
-                        :value (om/get-state owner :title)
-                        :onChange #(handle-change % owner :title)}]
-               [:textarea {:placeholder "text" :name "post-text"
-                           :value (om/get-state owner :text)
-                           :onChange #(handle-change % owner :text)}]
-               [:button {:type "submit" :className "button tiny"} "submit"]]]]))))
+      (html (if-not (:user data)
+              [:h4 "You must be logged in to submit a post. "
+               [:a {:href "#"
+                    :onClick #(om/update! data :modal :register)}
+                "Register now"]]
+              [:form {:onSubmit (fn [e]
+                                  (go (>! (om/get-state owner :submit-chan) 1))
+                                  (.preventDefault e)
+                                  false)}
+               [:div {:className "row"}
+                [:div {:className "large-12 columns"}
+                 [:label "Submit a post:"]
+                 [:input {:type "text" :placeholder "title" :name "post-title"
+                          :value (om/get-state owner :title)
+                          :onChange #(handle-change % owner :title)}]
+                 [:textarea {:placeholder "text" :name "post-text"
+                             :value (om/get-state owner :text)
+                             :onChange #(handle-change % owner :text)}]
+                 [:button {:type "submit" :className "button tiny"} "submit"]]]])))))
 
 (defn post-section [data owner]
   (reify
@@ -588,6 +554,8 @@
                 (om/build modal data
                           {:opts {:modal-view ((:modal data) modal-map)}}))
              ]))))
+
+(if-not (:user @app-state) true false)
 
 
 (defn start [target state app]
