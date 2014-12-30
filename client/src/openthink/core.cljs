@@ -447,25 +447,89 @@
                                   (println resp)))})))))
     om/IRender
     (render [this]
+      (html [:form {:onSubmit (fn [e]
+                                (go (>! (om/get-state owner :submit-chan) 1))
+                                (.preventDefault e)
+                                false)}
+             [:div {:className "row"}
+              [:div {:className "large-12 columns"}
+               [:label "Create and link a new post:"]
+               [:input {:type "text" :placeholder "title" :name "post-title"
+                        :value (om/get-state owner :title)
+                        :onChange #(handle-change % owner :title)}]
+               [:textarea {:placeholder "text" :name "post-text"
+                           :value (om/get-state owner :text)
+                           :onChange #(handle-change % owner :text)}]
+               [:button {:type "submit" :className "button tiny"} "create"]]]]))))
+
+(defn link-form [data owner opts]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:submit-chan (chan) :link ""})
+    om/IWillMount
+    (will-mount [_]
+      (let [submit-chan (om/get-state owner :submit-chan)]
+        (go (while true
+              (<! submit-chan)
+              (println "submitting post")
+              (POST "/link-post"
+                    {:response-format :transit
+                     :params {"child-text" (om/get-state owner :link)
+                              "parent" (:current_post data)}
+                     :handler (fn [resp]
+                                (println "link-form returned")
+                                (println resp)
+                                (let [resp (clojure.walk/keywordize-keys resp)]
+                                  (println resp)))})))))
+    om/IRender
+    (render [this]
+      (html [:form {:onSubmit (fn [e]
+                                (go (>! (om/get-state owner :submit-chan) 1))
+                                (.preventDefault e)
+                                false)}
+             [:div {:className "row"}
+              [:div {:className "large-12 columns"}
+               [:label "Link an existing post:"]
+               [:input {:type "text" :placeholder "URL or ID to a post" :name "link-text"
+                        :value (om/get-state owner :link)
+                        :onChange #(handle-change % owner :link)}]
+               [:button {:type "submit" :className "button tiny"} "link"]]]]))))
+
+(defn post-reply-section [data owner opts]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:reply-type :post})
+    om/IRender
+    (render [this]
       (html (if-not (:user data)
               [:h4 "You must be logged in to submit a post. "
                [:a {:href "#"
                     :onClick #(om/update! data :modal :register)}
                 "Register now"]]
-              [:form {:onSubmit (fn [e]
-                                  (go (>! (om/get-state owner :submit-chan) 1))
-                                  (.preventDefault e)
-                                  false)}
-               [:div {:className "row"}
-                [:div {:className "large-12 columns"}
-                 [:label "Submit a post:"]
-                 [:input {:type "text" :placeholder "title" :name "post-title"
-                          :value (om/get-state owner :title)
-                          :onChange #(handle-change % owner :title)}]
-                 [:textarea {:placeholder "text" :name "post-text"
-                             :value (om/get-state owner :text)
-                             :onChange #(handle-change % owner :text)}]
-                 [:button {:type "submit" :className "button tiny"} "submit"]]]])))))
+              (let [reply-type (om/get-state owner :reply-type)]
+                [:div
+                 [:dl {:className "sub-nav"}
+                  [:dt "How will you reply?"]
+                  [:dd {:className (if (= reply-type :post) "active" "")}
+                   [:a {:href "#" :onClick #(om/set-state! owner :reply-type :post)}
+                    "Create New Post"]]
+                  [:dd {:className (if (= reply-type :link) "active" "")}
+                   [:a {:href "#" :onClick #(om/set-state! owner :reply-type :link)}
+                    "Link Existing Post"]]]
+                 (cond
+                  (= reply-type :post) (om/build submit-form data)
+                  (= reply-type :link) (om/build link-form data))]))))))
+
+
+;; <dl class="sub-nav">
+;;   <dt>Filter:</dt>
+;;   <dd class="active"><a href="#">All</a></dd>
+;;   <dd><a href="#">Active</a></dd>
+;;   <dd><a href="#">Pending</a></dd>
+;;   <dd><a href="#">Suspended</a></dd>
+;; </dl>
 
 (defn post-section [data owner]
   (reify
@@ -500,7 +564,7 @@
       (html [:h2 "some modal txt"]))))
 
 (def modal-map {:basic basic-modal
-                :new-post submit-form
+                :new-post post-reply-section
                 :register register-form})
 
 (defn close-modal []

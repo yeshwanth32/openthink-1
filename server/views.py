@@ -92,6 +92,19 @@ def submit_post():
     else:
         return transitify({"success": "posted successfully"})
 
+def get_post_id_from_text(s):
+    return int(s)
+
+@app.route("/link-post", methods=["POST"])
+def link_post():
+    req_data = get_post_data_from_req(request)
+    relation = Relation.link_posts(req_data.get('parent'),
+        get_post_id_from_text(req_data.get('child-text')), current_user)
+    if isinstance(relation, basestring):
+        return transitify({"error": relation})
+    else:
+        return transitify({"success": "linked successfully"})
+
 @app.route("/post/<int:post_id>/comment", methods=["POST"])
 def submit_comment(post_id):
     req_data = get_post_data_from_req(request)
