@@ -19,7 +19,7 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='normalize.css') }}"></link>
         <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></link>
         <script type='text/javascript'>
-            var initial_app_state = "{{ app_state }}";
+            var initial_app_state = {{ app_state|tojson }};
         </script>
         <script type='text/javascript' id='lt_ws' src='http://localhost:52104/socket.io/lighttable/ws.js'></script>
     </head>

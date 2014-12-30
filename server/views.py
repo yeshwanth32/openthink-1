@@ -37,7 +37,6 @@ def post_page(post_id):
         "comments": [c.writeable for c in post.get_comments()],
         "user": writable_current_user(),
     }
-    print app_state["comments"]
     return render_template('base.html', app_state=transitify(app_state))
 
 
