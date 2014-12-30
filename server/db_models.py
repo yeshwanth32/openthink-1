@@ -9,7 +9,7 @@ from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import UserMixin
 from sqlalchemy.sql import func
 # from sqlalchemy import and_
-
+import re
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt()
@@ -123,10 +123,22 @@ class User(Model, UserMixin):
             return None
 
     @classmethod
-    def register_user(cls, username, email, password):
-        user = cls.query.filter_by(username=username).first()
+    def register_user(cls, username, email, password, r_password):
+        if re.search(r'[\s]', username):
+            return "username can't contain spaces"
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return "You must use a valid email address"
+        if password != r_password:
+            return "Your passwords don't match"
+        if len(password) < 7:
+            return "Your password must be atleast 7 characters"
+        user = cls.query.filter_by(username=username).first() 
         if user:
-            return "user already exists"
+            return "That username is taken"
+        user = cls.query.filter_by(email=email).first()
+        if user:
+            return "That email address is already in use"
+
         return cls.create(username=username, email=email, password=password)
 
     @property

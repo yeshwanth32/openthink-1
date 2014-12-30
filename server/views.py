@@ -71,7 +71,8 @@ def register():
     req_data = get_post_data_from_req(request)
     user = User.register_user(req_data.get("username"), 
                               req_data.get("email"),
-                              req_data.get("password"))
+                              req_data.get("password"),
+                              req_data.get("r-password"))
     if isinstance(user, basestring):
         return transitify({"error": user})
     login_user(user)

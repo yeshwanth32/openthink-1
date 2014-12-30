@@ -115,28 +115,30 @@ $include-html-global-classes: $include-html-classes;
 // $jet         : #222222;
 // $black       : #000000;
 
-$dark-blue: #4C6585;
-$darker-blue: #73869F;
+$darker-blue: #4B6784;
+$dark-blue: #71879E;
 $white-blue: #F1F3F5;
 $white-pink: #FFFCFB;
 $white-yellow: #FFFEFB;
+$white-orange: #FFFDFB;
 $dark-green: #468474;
 $dark-purple: #5B548D;
 $pinkish: #FFF2EB;
+$ruby: #CB756C;
 
-$topbar-bg-color: $darker-blue;
+$topbar-bg-color: $dark-blue;
 $topbar-dropdown-bg: $topbar-bg-color;
 
 // We use these as default colors throughout
-$primary-color: $dark-blue;
+$primary-color: $darker-blue;
 // $secondary-color: #e7e7e7;
-// $alert-color: #f04124;
+$alert-color: $ruby;
 // $success-color: #43AC6A;
-// $warning-color: #f08a24;
+$warning-color: #F3B0A9;
 // $info-color: #a0d3e8;
 
 // We use these to control various global styles
-$body-bg: $white-pink;
+$body-bg: $white-orange;
 // $body-font-color: $jet;
 // $body-font-family: $font-family-sans-serif;
 // $body-font-weight: $font-weight-normal;

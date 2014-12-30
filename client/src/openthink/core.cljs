@@ -163,59 +163,87 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:post (chan) :username "" :email "" :password ""})
+      {:post (chan) :error nil :state :ready
+       :username "" :email "" :password "" :r-password ""})
     om/IWillMount
     (will-mount [_]
       (let [post-ch (om/get-state owner :post)]
         (go-loop []
           (let [posting (<! post-ch)]
-            (om/set-state! owner :is-posting true)
+            (om/set-state! owner :state :posting)
+            (om/set-state! owner :error nil)
             (POST "/register"
                   {:response-format :transit
                    :params {"username" (om/get-state owner :username)
                             "email" (om/get-state owner :email)
-                            "password" (om/get-state owner :password)}
+                            "password" (om/get-state owner :password)
+                            "r-password" (om/get-state owner :r-password)}
                    :handler (fn [resp]
                               (println "register form returned")
                               (println resp)
                               (let [resp (clojure.walk/keywordize-keys resp)]
                                 (println resp)
-                                (when-not (contains? resp :error)
-                                  (om/update! data :user resp))))}))
+                                (om/set-state! owner :state :ready)
+                                (if (contains? resp :error)
+                                  (om/set-state! owner :error (:error resp))
+                                  (do (om/update! data :user resp)
+                                      (om/set-state! owner :state :completed)
+                                      ;(put! (om/get-state owner :close-chan) 1)
+                                    ))))}))
                  (recur))))
     om/IRender
     (render [this]
-      (html (if (om/get-state owner :is-posting)
-              [:li [:div nil "Registering... Please wait."]]
-              ;;[:li {:className "register-form has-form"}]
-              [:div {:className "row collapse"}
-               [:h3 "Register your account and start posting!"]
-               [:div {:className "large-12 columns"}
-                [:input {:id "register-username" :type "text"
-                         :placeholder "username"
-                         :value (om/get-state owner :username)
-                         :onChange #(handle-change % owner :username)
-                         }]]
-               [:div {:className "large-12 columns"}
-                [:input {:id "register-email" :type "text"
-                         :placeholder "email"
-                         :value (om/get-state owner :email)
-                         :onChange #(handle-change % owner :email)
-                         }]]
-               [:div {:className "large-12 columns"}
-                [:input {:id "register-password" :type "password"
-                         :placeholder "password"
-                         :value (om/get-state owner :password)
-                         :onChange #(handle-change % owner :password)
-                         }]]
-               [:div {:className "large-4 columns"}
-                [:button {:type "button" :className "btn btn-info"
-                          :onClick (fn [e]
-                                     (put! (om/get-state owner :post) 1)
-                                     (put! (om/get-state owner :close-chan) 1)
-                                     false)
-                          }
-                 "Register"]]])))))
+            (html (if (= :completed (om/get-state owner :state))
+                    [:div {:className "row register-section"}
+                     [:h3 (str "You have successfully registed as "
+                               (get-in data [:user :username]))]
+                     [:div {:className "large-4 columns"}
+                      [:button {:type "button" :className "btn btn-info"
+                                :onClick (fn [e] (put! (om/get-state owner :close-chan) 1)
+                                           false)}
+                       "aiight"]]]
+                    [:div {:className "row register-section"}
+                     [:h3 "Register your account and start posting!"]
+                     (when-let [error (om/get-state owner :error)]
+                       [:div {:className "large-12 columns"}
+                        [:div {:className "alert-box warning radius"} error]
+                        ])
+                     (when (= :posting (om/get-state owner :state))
+                       [:div {:className "large-12 columns"}
+                        [:div {:className "alert-box info radius"}
+                         "Registering account... Please wait"]])
+                     [:div {:className "large-12 columns"}
+                      [:input {:id "register-username" :type "text"
+                               :placeholder "username"
+                               :value (om/get-state owner :username)
+                               :onChange #(handle-change % owner :username)
+                               }]]
+                     [:div {:className "large-12 columns"}
+                      [:input {:id "register-email" :type "text"
+                               :placeholder "email"
+                               :value (om/get-state owner :email)
+                               :onChange #(handle-change % owner :email)
+                               }]]
+                     [:div {:className "large-12 columns"}
+                      [:input {:id "register-password" :type "password"
+                               :placeholder "password"
+                               :value (om/get-state owner :password)
+                               :onChange #(handle-change % owner :password)
+                               }]]
+                     [:div {:className "large-12 columns"}
+                      [:input {:id "register-r-password" :type "password"
+                               :placeholder "repeat password"
+                               :value (om/get-state owner :r-password)
+                               :onChange #(handle-change % owner :r-password)
+                               }]]
+                     [:div {:className "large-4 columns"}
+                      [:button {:type "button" :className "btn btn-info"
+                                :onClick (fn [e]
+                                           (put! (om/get-state owner :post) 1)
+                                           ;(put! (om/get-state owner :close-chan) 1)
+                                           false)
+                                }
+                       "Register"]]])))))
 
 ;; top bar components
 
