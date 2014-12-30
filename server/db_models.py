@@ -194,10 +194,12 @@ class Post(Model):
         return 1
 
     @classmethod
-    def submit_post(cls, user, title, text):
-        if user and title and text:
-            return cls.create(title=title, body=text, user=user)
-        return "missing data"
+    def submit_post(cls, user, text, title=None):
+        if not (user and text):
+            return "you need to include text to submit a post"
+        if title and len(title) > 140:
+            return "your title must be less than 140 characters long"
+        return cls.create(title=title, body=text, user=user)
 
     @property
     def writeable(self, replace_newline=True):

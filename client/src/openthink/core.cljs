@@ -44,6 +44,9 @@
 
 (def select-values (comp vals select-keys))
 
+(defn ask-for [list-of-wants params]
+  (assoc params "ask_for" list-of-wants "current_post" (:current_post @app_state)))
+
 (defn unescape-html
   "change html character entities into special characters"
   [text]
@@ -69,7 +72,6 @@
          atom)))
 
 (println app-state)
-
 
 ;; cursors
 
@@ -269,13 +271,12 @@
              [:section {:className "top-bar-section"}
               [:ul {:className "left"}
                [:button {:className "button large"
-                         :onClick #(om/update! data :modal :new-post)}
+                         :onClick #(do (om/update! data :reply-to nil)
+                                       (om/update! data :modal :new-post))}
                 "Create a new post"]]
               [:ul {:className "right"}
                [:li {:className "divider"}]
-               (om/build user-bar data)
-               ]]
-            ]))))
+               (om/build user-bar data)]]]))))
 
 (defn post-view [data owner]
   (reify
@@ -327,7 +328,7 @@
                 [:div {:className "large-10 columns"}
                  [:a {:href (str "/post/" (:id child-post))}
                   [:strong {:className "child-title"} (:title child-post)]]
-                 [:div (str (subs (:body child-post) 0 80)
+                 [:div (str (subs (str/replace (:body child-post) #"\\n|\n" " ") 0 80)
                             (if (> (count (:body child-post)) 80) "..." ""))]
                  [:span {:className "link-by"}
                   "linked by "
@@ -344,7 +345,8 @@
             child-pairs (partition-all 2 (filter identity child-rels))]
         (html [:div {:className "children-view"}
                [:div {:className "row reply-action"}
-                [:button {:onClick #(om/update! data :modal :new-post)
+                [:button {:onClick #(do (om/update! data :reply-to (:current_post data))
+                                        (om/update! data :modal :new-post))
                           :className "button expand large reply-btn"}
                  "Post a Reply"]]
                (if (empty? child-pairs)
@@ -425,26 +427,37 @@
                     (om/build comment-view comment))]
                  [:div "No comments yet"])])))))
 
-(defn submit-form [data owner opts]
+(defn submit-form [data owner {:keys [close-chan] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
-      {:submit-chan (chan) :title "" :text ""})
+      {:submit-chan (chan) :title "" :text "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
       (let [submit-chan (om/get-state owner :submit-chan)]
         (go (while true
               (<! submit-chan)
               (println "submitting post")
+              (om/set-state! owner :state :posting)
+              (om/set-state! owner :error nil)
               (POST "/submit-post"
                     {:response-format :transit
-                     :params {"title" (om/get-state owner :title)
-                              "text" (om/get-state owner :text)}
+                     :params (let [params {"title" (om/get-state owner :title)
+                                           "text" (om/get-state owner :text)}
+                                   params (ask-for ["children"] params)]
+                               (if (:reply-to data)
+                                 (assoc params "parent" (:reply-to data))
+                                 params))
                      :handler (fn [resp]
                                 (println "submit-form returned")
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
-                                  (println resp)))})))))
+                                  (println resp)
+                                  (om/set-state! owner :state :ready)
+                                  (if (contains? resp :error)
+                                    (om/set-state! owner :error (:error resp))
+                                    (do (om/transact! data #(merge % resp))
+                                        (put! close-chan 1)))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]
@@ -453,8 +466,12 @@
                                 false)}
              [:div {:className "row"}
               [:div {:className "large-12 columns"}
-               [:label "Create and link a new post:"]
-               [:input {:type "text" :placeholder "title" :name "post-title"
+               [:h3 "Create and link a new post:"]
+               (when-let [error (om/get-state owner :error)]
+                 [:div {:className "alert-box warning radius"} error])
+               (when (= :posting (om/get-state owner :state))
+                 [:div {:className "alert-box info radius"} "Posting... Please wait"])
+               [:input {:type "text" :placeholder "optional title" :name "post-title"
                         :value (om/get-state owner :title)
                         :onChange #(handle-change % owner :title)}]
                [:textarea {:placeholder "text" :name "post-text"
@@ -462,26 +479,34 @@
                            :onChange #(handle-change % owner :text)}]
                [:button {:type "submit" :className "button tiny"} "create"]]]]))))
 
-(defn link-form [data owner opts]
+(defn link-form [data owner {:keys [close-chan] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
-      {:submit-chan (chan) :link ""})
+      {:submit-chan (chan) :link "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
       (let [submit-chan (om/get-state owner :submit-chan)]
         (go (while true
               (<! submit-chan)
-              (println "submitting post")
+              (println "linking post")
+              (om/set-state! owner :state :posting)
+              (om/set-state! owner :error nil)
               (POST "/link-post"
                     {:response-format :transit
-                     :params {"child-text" (om/get-state owner :link)
-                              "parent" (:current_post data)}
+                     :params (ask-for ["children"]
+                                      {"child-text" (om/get-state owner :link)
+                                       "parent" (:current_post data)})
                      :handler (fn [resp]
                                 (println "link-form returned")
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
-                                  (println resp)))})))))
+                                  (println resp)
+                                  (om/set-state! owner :state :ready)
+                                  (if (contains? resp :error)
+                                    (om/set-state! owner :error (:error resp))
+                                    (do (om/transact! data #(merge % resp))
+                                        (put! close-chan 1)))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]
@@ -490,7 +515,11 @@
                                 false)}
              [:div {:className "row"}
               [:div {:className "large-12 columns"}
-               [:label "Link an existing post:"]
+               [:h3 "Link an existing post:"]
+               (when-let [error (om/get-state owner :error)]
+                 [:div {:className "alert-box warning radius"} error])
+               (when (= :posting (om/get-state owner :state))
+                 [:div {:className "alert-box info radius"} "Linking... Please wait"])
                [:input {:type "text" :placeholder "URL or ID to a post" :name "link-text"
                         :value (om/get-state owner :link)
                         :onChange #(handle-change % owner :link)}]
@@ -508,28 +537,27 @@
                [:a {:href "#"
                     :onClick #(om/update! data :modal :register)}
                 "Register now"]]
-              (let [reply-type (om/get-state owner :reply-type)]
-                [:div
-                 [:dl {:className "sub-nav"}
-                  [:dt "How will you reply?"]
-                  [:dd {:className (if (= reply-type :post) "active" "")}
-                   [:a {:href "#" :onClick #(om/set-state! owner :reply-type :post)}
-                    "Create New Post"]]
-                  [:dd {:className (if (= reply-type :link) "active" "")}
-                   [:a {:href "#" :onClick #(om/set-state! owner :reply-type :link)}
-                    "Link Existing Post"]]]
-                 (cond
-                  (= reply-type :post) (om/build submit-form data)
-                  (= reply-type :link) (om/build link-form data))]))))))
-
-
-;; <dl class="sub-nav">
-;;   <dt>Filter:</dt>
-;;   <dd class="active"><a href="#">All</a></dd>
-;;   <dd><a href="#">Active</a></dd>
-;;   <dd><a href="#">Pending</a></dd>
-;;   <dd><a href="#">Suspended</a></dd>
-;; </dl>
+              (if-not (:reply-to data)
+                (om/build submit-form data)
+                (let [reply-type (om/get-state owner :reply-type)]
+                  [:div {:className ""}
+                   [:h4 "Replying to post: "
+                    [:strong (:title (current-post))]
+                    [:small [:a {:href "#" :onClick #(om/update! data :reply-to nil)}
+                             " (cancel)"]]]
+                   [:hr]
+                   [:dl {:className "sub-nav"}
+                    [:dt "How will you reply?"]
+                    [:dd {:className (if (= reply-type :post) "active" "")}
+                     [:a {:href "#" :onClick #(om/set-state! owner :reply-type :post)}
+                      "Create New Post"]]
+                    [:dd {:className (if (= reply-type :link) "active" "")}
+                     [:a {:href "#" :onClick #(om/set-state! owner :reply-type :link)}
+                      "Link Existing Post"]]]
+                   (let [opts {:opts {:close-chan (om/get-state owner :close-chan)}}]
+                     (cond
+                      (= reply-type :post) (om/build submit-form data opts)
+                      (= reply-type :link) (om/build link-form data opts)))])))))))
 
 (defn post-section [data owner]
   (reify
@@ -616,23 +644,12 @@
               (om/build body data)
               (when (:modal data)
                 (om/build modal data
-                          {:opts {:modal-view ((:modal data) modal-map)}}))
-             ]))))
+                          {:opts {:modal-view ((:modal data) modal-map)}}))]))))
 
-(if-not (:user @app-state) true false)
+@app-state
 
 
 (defn start [target state app]
   (om/root app state {:target target}))
 
 (start (sel1 :#app) app-state app)
-
-
-
-
-
-
-
-
-
-

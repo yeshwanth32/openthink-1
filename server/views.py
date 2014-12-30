@@ -21,22 +21,29 @@ def writable_current_user():
 def dict_by_id(alist, key="id"):
     return dict([(item[key], item) for item in alist])
 
+def handle_asks(post, list_of_wants):
+    post = Post.query.filter(Post.id==post).one() if isinstance(post, int) else post
+    ret = {"current_post": post.id}
+    if "children" in list_of_wants:
+        rels = post.get_child_relations()
+        child_ids = [rel.child_id for rel in rels]
+        children = Post.query.filter(Post.id.in_(child_ids)).all()
+        posts = [p.writeable for p in children] + [post.writeable_with_children()]
+        rels = [r.writeable_with_vote_info(current_user) for r in rels]
+        ret["posts"] = dict_by_id(posts)
+        ret["rels"] = dict_by_id(rels)
+
+    if "comments" in list_of_wants:
+        ret["comments"] = [c.writeable for c in post.get_comments()]
+    return ret
+
+
 @app.route('/post/<int:post_id>')
 def post_page(post_id):
-    post = Post.query.filter(Post.id==post_id).one()
-    rels = post.get_child_relations()
-    child_ids = [rel.child_id for rel in rels]
-    children = Post.query.filter(Post.id.in_(child_ids)).all()
-    posts = [p.writeable for p in children] + [post.writeable_with_children()]
-    rels = [r.writeable_with_vote_info(current_user) for r in rels]
-    print "post is %s" % post.id
-    app_state = {
-        "current_post": post.id,
-        "posts": dict_by_id(posts),
-        "rels": dict_by_id(rels),
-        "comments": [c.writeable for c in post.get_comments()],
-        "user": writable_current_user(),
-    }
+    print "post is %s" % post_id
+    app_state = handle_asks(post_id, ["children", "comments"])
+    app_state["user"] = writable_current_user()
+    print app_state
     return render_template('base.html', app_state=transitify(app_state))
 
 
@@ -81,15 +88,21 @@ def register():
 def submit_post():
     req_data = get_post_data_from_req(request)
     post = Post.submit_post(current_user,
-                     req_data.get("title"),
-                     req_data.get("text"))
+                     req_data.get("text"),
+                     req_data.get("title"))
+    if isinstance(post, basestring):
+        return transitify({"error": post, "error_type": "create-post"})
+
     relation = Relation.link_posts(req_data.get('parent', Post.root_post_id()), 
                                    post, 
                                    current_user)
-    if isinstance(post, basestring) or isinstance(relation, basestring):
-        return transitify({"error_post": post, "error_relation": relation})
-    else:
-        return transitify({"success": "posted successfully"})
+    if isinstance(relation, basestring):
+        return transitify({"error": relation, "error_type": "link-posts"})
+
+    app_state = {"success": "posted successfully"}
+    if req_data.get('current_post') and req_data.get('ask_for'):
+        app_state.update(handle_asks(req_data.get('current_post'), req_data.get('ask_for')))
+    return transitify(app_state)
 
 def get_post_id_from_text(s):
     return int(s)
@@ -101,8 +114,11 @@ def link_post():
         get_post_id_from_text(req_data.get('child-text')), current_user)
     if isinstance(relation, basestring):
         return transitify({"error": relation})
-    else:
-        return transitify({"success": "linked successfully"})
+
+    app_state = {"success": "linked successfully"}
+    if req_data.get('current_post') and req_data.get('ask_for'):
+        app_state.update(handle_asks(req_data.get('current_post'), req_data.get('ask_for')))
+    return transitify(app_state)
 
 @app.route("/post/<int:post_id>/comment", methods=["POST"])
 def submit_comment(post_id):
