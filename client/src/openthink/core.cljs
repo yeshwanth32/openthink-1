@@ -47,6 +47,10 @@
 (defn ask-for [list-of-wants params]
   (assoc params "ask_for" list-of-wants "current_post" (:current_post @app_state)))
 
+(defn do-on-enter [f]
+  (fn [e]
+    (when (== (.-keyCode e) 13) (f))))
+
 (defn unescape-html
   "change html character entities into special characters"
   [text]
@@ -123,7 +127,8 @@
     (render [this]
       (html (if (om/get-state owner :is-posting)
               [:li [:h4 "Logging in... Please wait."]]
-              [:li {:className "login-form has-form"}
+              [:li {:className "login-form has-form"
+                    :onKeyPress (do-on-enter #(put! (om/get-state owner :post) 1))}
                 [:div {:className "row collapse"}
                  [:div {:className "small-3 columns"}
                   [:input {:id "login-username" :type "text"
@@ -139,8 +144,7 @@
                            }]]
                  [:div {:className "small-3 columns"}
                   [:button {:type "button" :className "btn btn-info"
-                            :onClick (fn [e] (put!(om/get-state owner :post) 1) false)
-                            }
+                            :onClick (fn [e] (put! (om/get-state owner :post) 1) false)}
                    "Login"]]
                  [:div {:className "small-3 columns inline"}
                    "or "
@@ -203,7 +207,8 @@
                                 :onClick (fn [e] (put! (om/get-state owner :close-chan) 1)
                                            false)}
                        "aiight"]]]
-                    [:div {:className "row register-section"}
+                    [:div {:className "row register-section"
+                           :onKeyPress (do-on-enter #(put! (om/get-state owner :post) 1))}
                      [:h3 "Register your account and start posting!"]
                      (when-let [error (om/get-state owner :error)]
                        [:div {:className "large-12 columns"}
@@ -637,7 +642,6 @@
   (reify
     om/IRender
     (render [this]
-      (println (:modal data))
       (html [:div {:className "app"}
               (om/build header data)
               ;(om/build submit-form data)
