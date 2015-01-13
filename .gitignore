@@ -6,3 +6,4 @@ extra/
 openthink-env/
 server/localsettings.py
 client/target/
+stuff/

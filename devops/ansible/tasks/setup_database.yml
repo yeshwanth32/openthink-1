@@ -1,0 +1,8 @@
+---
+# task for setting up the database
+
+- name: create a test database user
+  postgresql_user: user=testuser password=test1ng
+
+- name: create test database
+  postgresql_db: name=test_ansible_db owner=testuser

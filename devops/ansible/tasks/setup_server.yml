@@ -1,0 +1,108 @@
+---
+# task for setting up the server
+
+- name: update apt
+  apt: update_cache=yes
+
+- name: install initial packages
+  apt: pkg={{ item }} state=installed install_recommends=no
+  with_items:
+    - build-essential
+    - software-properties-common
+    - htop
+    - vim-nox
+    - ufw
+
+- name: add nginx ppas
+  apt_repository: repo={{ item }} state=present
+  with_items:
+    - ppa:nginx/stable
+
+- name: add postgresql repo
+  apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main' state=present
+
+- name: install main packages for python nginx and postgresql
+  apt: pkg={{ item }} state=installed install_recommends=no force=yes
+  with_items:
+    - libpq-dev
+    - libmysqlclient-dev
+    - libxml2-dev
+    - libjpeg62
+    - libjpeg62-dev
+    - libfreetype6
+    - libfreetype6-dev
+    - zlib1g-dev
+    - mysql-client
+    - python-dev
+    - python-setuptools
+    - python-imaging
+    - python-mysqldb
+    - python-psycopg2
+    - git-core
+    - nginx
+    - postgresql
+    - libpq-dev
+    - python-dev
+
+- name: install pip
+  easy_install: name=pip
+
+- name: install various libraries with pip
+  pip: name={{ item }} state=present
+  with_items:
+    - virtualenv
+    - supervisor
+    - psycopg2
+
+
+- easy_install: name=pip
+
+- name: install python transit with pip
+  easy_install: name=transit-python virtualenv=${virtualenv}
+  tags: install
+
+- name: symlink imaging library files
+  file: src=/usr/lib/x86_64-linux-gnu/libfreetype.so dest=/usr/lib/libfreetype.so state=link
+
+- name: symlink imaging library files
+  file: src=/usr/lib/x86_64-linux-gnu/libz.so dest=/usr/lib/libz.so state=link
+
+- name: symlink imaging library files
+  file: src=/usr/lib/x86_64-linux-gnu/libjpeg.so.62 dest=/usr/lib/x86_64-linux-gnu/libjpeg.so state=link
+
+- name: symlink imaging library files
+  file: src=/usr/lib/x86_64-linux-gnu/libjpeg.so dest=/usr/lib/libjpeg.so state=link
+
+- name: remove default nginx site
+  file: path=/etc/nginx/sites-enabled/default state=absent
+
+- name: write nginx.conf
+  template: src=templates/nginx.conf dest=/etc/nginx/nginx.conf
+
+- name: create supervisord config folder
+  file: dest=/etc/supervisor state=directory owner=root
+
+- name: create supervisord config
+  template: src=templates/supervisord.conf dest=/etc/supervisord.conf
+
+- name: create supervisord init script
+  template: src=templates/supervisord.sh dest=/etc/init.d/supervisord mode=0755
+
+- name: start supervisord service and have it run during system startup
+  service: name=supervisord state=started enabled=yes
+
+- name: create webapps directory
+  file: dest=/srv/webapps state=directory
+
+- name: add postgres user to admin group
+  user: name=postgres groups=admin append=yes
+
+- name: update postgres db configuration
+  copy: src=templates/postgresql.conf dest=/etc/postgresql/9.4/main/postgresql.conf
+  notify:
+    - restart postgresql
+
+- name: update postgres client configuration
+  copy: src=templates/pg_hba.conf dest=/etc/postgresql/9.4/main/pg_hba.conf
+  notify:
+    - restart postgresql
