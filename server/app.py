@@ -18,8 +18,8 @@ app.config.from_object(__name__)
 from views import blueprint
 app.register_blueprint(blueprint)
 
-from db_models import db, login_manager
-db.init_app(app)
+from db_models import create_and_set_db, login_manager
+db = create_and_set_db(app)
 login_manager.init_app(app)
 
 
