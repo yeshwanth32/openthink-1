@@ -4,7 +4,5 @@
 *.ppk
 extra/
 openthink-env/
-server/static/
-server/style/js
 server/localsettings.py
 client/target/
