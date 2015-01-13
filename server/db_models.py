@@ -2,7 +2,7 @@ import datetime as dt
 import pytz
 
 from app import app, login_manager
-from app import SETTINGS
+from localsettings import SETTINGS
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
@@ -19,9 +19,9 @@ def setup_db(drop_tables_first=False):
         db.drop_all()
     db.create_all()
     # create admin user
-    admin_user = User.create(username=SETTINGS.admin_username, 
-                             password=SETTINGS.admin_password,
-                             email=SETTINGS.admin_email)
+    admin_user = User.create(username=SETTINGS["admin_username"], 
+                             password=SETTINGS["admin_password"],
+                             email=SETTINGS["admin_email"])
     # create root post
     Post.create(title="Welcome to Openthink!",
                 body="Browse these posts or submit your own!",
@@ -108,7 +108,7 @@ class User(Model, UserMixin):
 
     @classmethod
     def get_admin_user(cls):
-        return cls.query.filter_by(username=SETTINGS.admin_username).first()
+        return cls.query.filter_by(username=SETTINGS["admin_username"]).first()
 
     @classmethod
     def admin_user_id(cls):
