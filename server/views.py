@@ -1,11 +1,12 @@
-from app import app
-from flask import Flask, request, session, g, redirect, url_for, abort, \
+from flask import Blueprint, Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from db_models import User, Post, Relation, Comment, Vote
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
 from flask.ext.login import login_user, logout_user, login_required, current_user
+
+blueprint = Blueprint('views', __name__)
 
 def transitify(val, format='json'):
     io = StringIO()
@@ -38,7 +39,7 @@ def handle_asks(post, list_of_wants):
     return ret
 
 
-@app.route('/post/<int:post_id>')
+@blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
     print "post is %s" % post_id
     app_state = handle_asks(post_id, ["children", "comments"])
@@ -47,7 +48,7 @@ def post_page(post_id):
     return render_template('base.html', app_state=transitify(app_state))
 
 
-@app.route('/')
+@blueprint.route('/')
 def index():
     app_state = {"user": writable_current_user()}
     return post_page(Post.root_post_id())
@@ -56,7 +57,7 @@ def get_post_data_from_req(request):
     reader = Reader()
     return reader.read(StringIO(request.data))
 
-@app.route("/login", methods=["POST"])
+@blueprint.route("/login", methods=["POST"])
 def login():
     req_data = get_post_data_from_req(request)
     user = User.login_user(req_data.get("username"), req_data.get("password"))
@@ -66,13 +67,13 @@ def login():
     else:
         return transitify({"error": "No user found"})
 
-@app.route("/logout", methods=["POST"])
+@blueprint.route("/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
     return transitify("Log out successful")
 
-@app.route("/register", methods=["POST"])
+@blueprint.route("/register", methods=["POST"])
 def register():
     req_data = get_post_data_from_req(request)
     user = User.register_user(req_data.get("username"), 
@@ -84,7 +85,7 @@ def register():
     login_user(user)
     return transitify({"username": user.username, "id": user.id})
 
-@app.route("/submit-post", methods=["POST"])
+@blueprint.route("/submit-post", methods=["POST"])
 def submit_post():
     req_data = get_post_data_from_req(request)
     post = Post.submit_post(current_user,
@@ -107,7 +108,7 @@ def submit_post():
 def get_post_id_from_text(s):
     return int(s)
 
-@app.route("/link-post", methods=["POST"])
+@blueprint.route("/link-post", methods=["POST"])
 def link_post():
     req_data = get_post_data_from_req(request)
     relation = Relation.link_posts(req_data.get('parent'),
@@ -120,7 +121,7 @@ def link_post():
         app_state.update(handle_asks(req_data.get('current_post'), req_data.get('ask_for')))
     return transitify(app_state)
 
-@app.route("/post/<int:post_id>/comment", methods=["POST"])
+@blueprint.route("/post/<int:post_id>/comment", methods=["POST"])
 def submit_comment(post_id):
     req_data = get_post_data_from_req(request)
     comment = Comment.submit_comment(current_user, post_id, req_data.get('body'))
@@ -129,7 +130,7 @@ def submit_comment(post_id):
     post = Post.query.filter(Post.id==post_id).one()
     return transitify({"comments": [c.writeable for c in post.get_comments()]})
 
-@app.route("/vote", methods=["POST"])
+@blueprint.route("/vote", methods=["POST"])
 def submit_vote():
     req_data = get_post_data_from_req(request)
     vote = Vote.submit_vote(current_user, int(req_data.get('rel_id')), int(req_data.get('value')))

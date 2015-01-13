@@ -2,7 +2,7 @@
 # task for setting up the database
 
 - name: create a test database user
-  postgresql_user: user=testuser password=test1ng
+  postgresql_user: user=postgres password=postgres
 
 - name: create test database
-  postgresql_db: name=test_ansible_db owner=testuser
+  postgresql_db: name=thinkdb owner=postgres
