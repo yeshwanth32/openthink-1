@@ -10,14 +10,15 @@ from sqlalchemy.sql import func
 # from sqlalchemy import and_
 import re
 
-db = None
+db = SQLAlchemy()
 def create_and_set_db(app):
-    global db = SQLAlchemy(app)
-    return db;
+    global db
+    db = SQLAlchemy(app)
+    return app
 
 bcrypt = Bcrypt()
 
-def setup_db(db, drop_tables_first=False):
+def setup_db(drop_tables_first=False):
     if drop_tables_first:
         db.drop_all()
     db.create_all()
