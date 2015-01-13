@@ -1,6 +1,9 @@
 ---
 - hosts: app
   sudo: yes
+  vars:
+    env:
+      UWSGI_PROFILE_OVERRIDE: "ssl=false;routing=true;pcre=true"
 
   # vars:
   #   project_name: openthink
@@ -23,6 +26,19 @@
         requirements: "{{ project_folder }}/devops/requirements/dev.txt" 
         virtualenv: "{{ virtual_env }}"
         state: present
+
+    - name: install python transit with pip
+      easy_install: name=transit-python virtualenv={{ virtual_env }}
+      environment: env
+      tags: install
+
+    - name: check if new settings file exists
+      stat: path={{ new_settings_loc }}
+      register: new_settings
+
+    - name: Copy over new settings file if exists
+      command: mv {{ new_settings_loc }} {{ project_folder}}/server/
+      when: new_settings.stat.exists
 
     - name: create supervisor program config
       template: src=templates/supervisor.ini dest=/etc/supervisor/{{ project_name }}.ini

@@ -1,8 +1,8 @@
 import datetime as dt
 import pytz
 
-from server import app, login_manager
-from server import localsettings as SETTINGS
+from app import app, login_manager
+from app import SETTINGS
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
