@@ -6,6 +6,7 @@ MarkupSafe==0.23
 Werkzeug==0.9.6
 Jinja2==2.7.3
 itsdangerous==0.24
+uwsgi==2.0.9
 
 # Application
 # transit-python  #todo: figure out way to describe transit-python package here
@@ -14,6 +15,7 @@ itsdangerous==0.24
 Flask-SQLAlchemy==2.0
 SQLAlchemy==0.9.7
 pytz
+psycopg2
 
 # Migrations
 Flask-Migrate==1.2.0

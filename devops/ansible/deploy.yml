@@ -1,0 +1,48 @@
+---
+- hosts: app
+  sudo: yes
+
+  # vars:
+  #   project_name: openthink
+  #   project_repo: https://github.com/yedi/openthink.git
+  #   repo_remote: origin
+  #   repo_version: master
+  #   webapps_dir: /srv/webapps
+  #   wsgi_file: app.py
+  #   wsgi_callable: app
+
+  tasks:
+    - name: ensure log directory
+      file: dest={{ projects_root }}/log/{{ project_name }}/ state=directory
+
+    - name: deploy code from repository
+      git: repo={{ project_repo }} dest={{ project_folder }} remote=origin version=release
+
+    - name: install dependencies into virtualenv
+      pip: 
+        requirements: "{{ project_folder }}/devops/requirements/dev.txt" 
+        virtualenv: "{{ virtual_env }}"
+        state: present
+
+    - name: create supervisor program config
+      template: src=templates/supervisor.ini dest=/etc/supervisor/{{ project_name }}.ini
+      notify:
+        - restart app
+
+    - name: create nginx site config
+      template: src=templates/nginx_site.conf dest=/etc/nginx/sites-available/{{ project_name }}.conf
+      notify:
+        - restart nginx
+
+    - name: link nginx config
+      file: src=/etc/nginx/sites-available/{{ project_name }}.conf dest=/etc/nginx/sites-enabled/{{ project_name }}.conf state=link
+
+    - name: start app
+      supervisorctl: name={{ project_name }} state=started
+
+  handlers:
+    - name: restart app
+      supervisorctl: name={{ project_name }} state=restarted
+
+    - name: restart nginx
+      service: name=nginx state=restarted

@@ -1,0 +1,20 @@
+---
+- hosts: app
+  sudo: yes
+
+  tasks:
+    - include: tasks/setup_server.yml
+
+  handlers:
+    - include: handlers/handlers.yml  
+
+- hosts: database
+  sudo: yes
+  sudo_user: postgres
+
+  tasks:
+    - include: tasks/setup_database.yml
+
+  handlers:
+    - include: handlers/handlers.yml
+       

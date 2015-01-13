@@ -1,0 +1,7 @@
+# -*- mode: yaml -*-
+---
+project_name: openthink
+projects_root: /var/projects
+project_folder: "{{ projects_root }}/{{ project_name }}"
+project_repo: https://github.com/yedi/openthink.git
+virtual_env: "{{ project_folder }}/{{ project_name }}-env"
