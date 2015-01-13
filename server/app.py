@@ -3,12 +3,12 @@ from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from flask.ext.login import LoginManager
-import localsettings as SETTINGS
+from localsettings import SETTINGS
 
 # configuration
 DEBUG = True
 # SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/openthink.db'
-SQLALCHEMY_DATABASE_URI = SETTINGS.DB_CONNECTION_STRING
+SQLALCHEMY_DATABASE_URI = SETTINGS["DB_CONNECTION_STRING"]
 
 SECRET_KEY = 'why would I tell you my secret key?'
 
@@ -18,7 +18,7 @@ app.config.from_object(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-from views import views
+from views import *
 
 if __name__ == '__main__':
     app.run()
