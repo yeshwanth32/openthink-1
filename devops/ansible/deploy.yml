@@ -37,7 +37,7 @@
       register: new_settings
 
     - name: Copy over new settings file if exists
-      command: mv {{ new_settings_loc }} {{ project_folder}}/server/
+      command: mv {{ new_settings_loc }} {{ project_folder}}/server/localsettings.py
       when: new_settings.stat.exists
 
     - name: create supervisor program config

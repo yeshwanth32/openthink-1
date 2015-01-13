@@ -1,17 +1,16 @@
 import datetime as dt
 import pytz
 
-from app import app, login_manager
 from localsettings import SETTINGS
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
-from flask.ext.login import UserMixin
+from flask.ext.login import UserMixin, LoginManager
 from sqlalchemy.sql import func
 # from sqlalchemy import and_
 import re
 
-db = SQLAlchemy(app)
+db = SQLAlchemy()
 bcrypt = Bcrypt()
 
 def setup_db(drop_tables_first=False):
@@ -353,6 +352,9 @@ class Vote(CRUDMixin, db.Model):
     def __repr__(self):
         return '<Vote user:%r rel:%r value:%s>' % (self.user_id, self.rel_id, self.value)
 
+
+# set up login_manger
+login_manager = LoginManager()
 @login_manager.user_loader
 def load_user(userid):
     return User.query.get(userid)
