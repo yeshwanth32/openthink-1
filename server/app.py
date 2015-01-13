@@ -16,11 +16,6 @@ SECRET_KEY = 'why would I tell you my secret key?'
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-
-from views import blueprint
-app.register_blueprint(blueprint)
-
-
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 
