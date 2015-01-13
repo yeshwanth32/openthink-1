@@ -2,6 +2,8 @@ from contextlib import closing
 from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.login import LoginManager
 from localsettings import SETTINGS
 
 # configuration
@@ -18,9 +20,9 @@ app.config.from_object(__name__)
 from views import blueprint
 app.register_blueprint(blueprint)
 
-from db_models import create_and_set_db, login_manager
-db = create_and_set_db(app)
-login_manager.init_app(app)
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
 
 
 if __name__ == '__main__':
