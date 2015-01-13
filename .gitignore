@@ -9,3 +9,6 @@ server/style/js
 server/localsettings.py
 client/target/
 stuff/
+devops/ansible/group_vars/
+devops/ansible/files/
+devops/.vagrant/

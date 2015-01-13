@@ -43,6 +43,8 @@
     - postgresql
     - libpq-dev
     - python-dev
+    - libpcre3 
+    - libpcre3-dev
 
 - name: install pip
   easy_install: name=pip
@@ -53,13 +55,6 @@
     - virtualenv
     - supervisor
     - psycopg2
-
-
-- easy_install: name=pip
-
-- name: install python transit with pip
-  easy_install: name=transit-python virtualenv=${virtualenv}
-  tags: install
 
 - name: symlink imaging library files
   file: src=/usr/lib/x86_64-linux-gnu/libfreetype.so dest=/usr/lib/libfreetype.so state=link
@@ -106,3 +101,27 @@
   copy: src=templates/pg_hba.conf dest=/etc/postgresql/9.4/main/pg_hba.conf
   notify:
     - restart postgresql
+
+- name: ensure settings directory
+  file: dest={{ projects_root }}/settings/ state=directory
+
+- name: copy over localsettings
+  copy: 
+    src: files/localsettings.py 
+    dest: "{{ new_settings_loc }}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
