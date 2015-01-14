@@ -208,10 +208,6 @@ class Post(Model):
             ret_dict["body"] = ret_dict["body"].replace("\n","\\n")
         return ret_dict
 
-    def writeable_with_children(self, limit=8):
-        child_rel_ids = [r[0] for r in self.get_child_relations(limit=limit, ids_only=True)]
-        return dict(list(self.writeable.items()) + [("child_rel_ids", child_rel_ids)])
-
     def __repr__(self):
         return '<Post %r>' % self.title
 
@@ -256,7 +252,8 @@ class Relation(Model):
 
     @property
     def votecount(self):
-        return int(self.get_votes().with_entities(func.sum(Vote.value)).first()[0])
+        vote_sum = self.get_votes().with_entities(func.sum(Vote.value)).first()[0]
+        return int(vote_sum) if vote_sum is not None else 0
 
     @property
     def writeable(self):

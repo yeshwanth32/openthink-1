@@ -1,6 +1,7 @@
 from flask import Blueprint, Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from db_models import User, Post, Relation, Comment, Vote
+from db_queries import child_rel_query
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -26,18 +27,32 @@ def handle_asks(post, list_of_wants):
     post = Post.query.filter(Post.id==post).one() if isinstance(post, int) else post
     ret = {"current_post": post.id}
     if "children" in list_of_wants:
-        rels = post.get_child_relations()
+        rels = child_rel_query(post.id)
         child_ids = [rel.child_id for rel in rels]
         children = Post.query.filter(Post.id.in_(child_ids)).all()
-        posts = [p.writeable for p in children] + [post.writeable_with_children()]
+        child_posts = [p.writeable for p in children]
+        writeable_post = dict(post.writeable.items() + 
+            [("child_rel_ids", [r.id for r in rels])])
         rels = [r.writeable_with_vote_info(current_user) for r in rels]
-        ret["posts"] = dict_by_id(posts)
+        ret["posts"] = dict_by_id(child_posts + [writeable_post])
         ret["rels"] = dict_by_id(rels)
 
     if "comments" in list_of_wants:
         ret["comments"] = [c.writeable for c in post.get_comments()]
     return ret
 
+
+@blueprint.route('/children/<int:post_id>')
+def children_endpoint(post_id):
+    sort_by = request.args.get('sort', 'top')
+    page = request.args.get('page', 0)
+    rels = child_rel_query(post_id, page=page, sort_by=sort_by)
+    posts = Post.query.filter(Post.id.in_([r.child_id for r in rels])).all()
+    return transitify({
+        "posts": [p.writeable for p in posts], 
+        "rels": [r.writeable_with_vote_info(current_user) for r in rels], 
+        "new_rel_ids": [r.id for r in rels]
+    })
 
 @blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
@@ -46,7 +61,6 @@ def post_page(post_id):
     app_state["user"] = writable_current_user()
     print app_state
     return render_template('base.html', app_state=transitify(app_state))
-
 
 @blueprint.route('/')
 def index():
