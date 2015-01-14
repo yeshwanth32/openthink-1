@@ -11,14 +11,12 @@ def child_rel_query(post_id, page=0, sort_by='top'):
         rels_count = db.session.query(Relation, counts.c.votecount)\
                                .filter(Relation.parent_id==post_id)\
                                .outerjoin(counts, Relation.id==counts.c.rel_id)\
-                               .order_by(counts.c.votecount)\
-                               .slice(page*8, ((page+1) * 8) -1)
-        print rels_count.all()
+                               .order_by(func.coalesce(counts.c.votecount, 0).desc())\
+                               .slice(page*8, (page+1) * 8)
         rels = [rel_count[0] for rel_count in rels_count]
     else:
         rels = db.session.query(Relation)\
-                         .order_by(Relation.time_linked)\
+                         .order_by(Relation.time_linked.desc())\
                          .filter(Relation.parent_id==post_id)\
-                         .slice(page*8, ((page+1) * 8) -1).all()
-
+                         .slice(page*8, (page+1) * 8).all()
     return rels

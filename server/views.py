@@ -46,11 +46,12 @@ def handle_asks(post, list_of_wants):
 def children_endpoint(post_id):
     sort_by = request.args.get('sort', 'top')
     page = request.args.get('page', 0)
-    rels = child_rel_query(post_id, page=page, sort_by=sort_by)
+    rels = child_rel_query(post_id, page=int(page), sort_by=sort_by)
     posts = Post.query.filter(Post.id.in_([r.child_id for r in rels])).all()
     return transitify({
-        "posts": [p.writeable for p in posts], 
-        "rels": [r.writeable_with_vote_info(current_user) for r in rels], 
+        "posts": dict_by_id([p.writeable for p in posts]), 
+        "rels": dict_by_id(
+            [r.writeable_with_vote_info(current_user) for r in rels]), 
         "new_rel_ids": [r.id for r in rels]
     })
 
