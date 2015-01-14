@@ -20,6 +20,8 @@
 
     - name: deploy code from repository
       git: repo={{ project_repo }} dest={{ project_folder }} remote=origin version=release
+      notify:
+        - restart app
 
     - name: install dependencies into virtualenv
       pip: 
@@ -36,9 +38,13 @@
       stat: path={{ new_settings_loc }}
       register: new_settings
 
+    - name: check if settings file doesn't exist
+      stat: path={{ project_folder }}/server/localsettings.py
+      register: old_settings
+
     - name: Copy over new settings file if exists
-      command: mv {{ new_settings_loc }} {{ project_folder}}/server/localsettings.py
-      when: new_settings.stat.exists
+      command: cp {{ new_settings_loc }} {{ project_folder}}/server/localsettings.py
+      when: new_settings.stat.exists or not old_settings.stat.exists
 
     - name: create supervisor program config
       template: src=templates/supervisor.ini dest=/etc/supervisor/{{ project_name }}.ini

@@ -256,7 +256,7 @@ class Relation(Model):
 
     @property
     def votecount(self):
-        return self.get_votes().with_entities(func.sum(Vote.value)).first()[0]
+        return int(self.get_votes().with_entities(func.sum(Vote.value)).first()[0])
 
     @property
     def writeable(self):
@@ -273,7 +273,7 @@ class Relation(Model):
         user_id = user if isinstance(user, int) else user.id
         vote = Vote.query.filter((Vote.rel_id==self.id) & (Vote.user_id==user_id)).first()
         if vote:
-            vote_value = vote.value
+            vote_value = int(vote.value)
         return dict(list(self.writeable.items()) + [("user_vote_value", vote_value)])
 
     def __repr__(self):

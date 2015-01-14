@@ -89,6 +89,9 @@
 - name: create webapps directory
   file: dest=/srv/webapps state=directory
 
+- name: ensure admin group exists
+  group: name=admin state=present
+
 - name: add postgres user to admin group
   user: name=postgres groups=admin append=yes
 
@@ -107,7 +110,7 @@
 
 - name: copy over localsettings
   copy: 
-    src: files/localsettings.py 
+    src: files/{{ localsettings_file }} 
     dest: "{{ new_settings_loc }}"
 
 
