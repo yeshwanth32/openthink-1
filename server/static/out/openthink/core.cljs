@@ -42,7 +42,8 @@
   (for [p (split-text s)]
     [:p p]))
 
-(def select-values (comp vals select-keys))
+(defn select-values [map ks]
+  (reduce #(conj %1 (map %2)) [] ks))
 
 (defn ask-for [list-of-wants params]
   (assoc params "ask_for" list-of-wants "current_post" (:current_post @app_state)))
@@ -73,6 +74,7 @@
          unescape-html
          (t/read rdr)
          clojure.walk/keywordize-keys
+         (merge {:sort-value "top"})
          atom)))
 
 (println app-state)
@@ -341,8 +343,39 @@
                   " on "
                   (date (:time_linked rel))]]]])))))
 
+(defn sort-option-attrs [sort-value selected-value]
+  (let [attrs {:value sort-value}]
+    (if (= sort-value selected-value)
+      (assoc attrs :selected "selected")
+      attrs)))
+
 (defn children-view [data owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:sort-chan (chan) :state :ready})
+    om/IWillMount
+    (will-mount [_]
+      (let [sort-ch (om/get-state owner :sort-chan)]
+        (go-loop []
+          (let [new-sort-val (<! sort-ch)]
+            (om/set-state! owner :state :sorting)
+            (om/update! data :sort-value new-sort-val)
+            (GET (str "/children/" (:current_post data))
+                  {:response-format :transit
+                   :params {"sort" new-sort-val}
+                   :handler (fn [resp]
+                              (println "sort returned")
+                              (let [resp (clojure.walk/keywordize-keys resp)]
+                                (println resp)
+                                (om/set-state! owner :state :ready)
+                                (when-not (contains? resp :error)
+                                  (do
+                                    (om/transact! data :posts merge (:posts resp))
+                                    (om/transact! data :rels merge (:rels resp))
+                                    (om/update! (current-post) :child_rel_ids
+                                                (:new_rel_ids resp))))))}))
+                 (recur))))
     om/IRender
     (render [_]
       (let [child-rel-ids (:child_rel_ids (current-post))
@@ -353,15 +386,16 @@
                 [:button {:onClick #(do (om/update! data :reply-to (:current_post data))
                                         (om/update! data :modal :new-post))
                           :className "button expand large reply-btn"}
-                 "Post a Reply"]]
+                 "Link new Post"]]
                (if (empty? child-pairs)
                  [:div "No children"]
                  [:span
                   [:div {:className "row child-sort-section"}
-                   [:select
-                    [:option {:value "top"} "Top"]
-                    [:option {:value "new"} "Newest"]
-                    [:option {:value "hot"} "Hot"]]]
+                   (let [sval (:sort-value data)
+                         sort-ch (om/get-state owner :sort-chan)]
+                     [:select {:onChange #(put! sort-ch (-> % .-target .-value))}
+                      [:option (sort-option-attrs "top" sval) "Top"]
+                      [:option (sort-option-attrs "new" sval) "Newest"]])]
                   (for [child (filter identity child-rels)]
                     [:div {:className "row"}
                      (om/build child-view child)])])])))))
@@ -546,7 +580,7 @@
                 (om/build submit-form data)
                 (let [reply-type (om/get-state owner :reply-type)]
                   [:div {:className ""}
-                   [:h4 "Replying to post: "
+                   [:h4 "Linking to post: "
                     [:strong (:title (current-post))]
                     [:small [:a {:href "#" :onClick #(om/update! data :reply-to nil)}
                              " (cancel)"]]]
