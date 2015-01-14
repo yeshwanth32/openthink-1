@@ -386,7 +386,7 @@
                 [:button {:onClick #(do (om/update! data :reply-to (:current_post data))
                                         (om/update! data :modal :new-post))
                           :className "button expand large reply-btn"}
-                 "Post a Reply"]]
+                 "Link new Post"]]
                (if (empty? child-pairs)
                  [:div "No children"]
                  [:span
@@ -580,7 +580,7 @@
                 (om/build submit-form data)
                 (let [reply-type (om/get-state owner :reply-type)]
                   [:div {:className ""}
-                   [:h4 "Replying to post: "
+                   [:h4 "Linking to post: "
                     [:strong (:title (current-post))]
                     [:small [:a {:href "#" :onClick #(om/update! data :reply-to nil)}
                              " (cancel)"]]]
