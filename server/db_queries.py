@@ -11,7 +11,8 @@ def child_rel_query(post_id, page=0, sort_by='top'):
         rels_count = db.session.query(Relation, counts.c.votecount)\
                                .filter(Relation.parent_id==post_id)\
                                .outerjoin(counts, Relation.id==counts.c.rel_id)\
-                               .order_by(func.coalesce(counts.c.votecount, 0).desc())\
+                               .order_by(func.coalesce(counts.c.votecount, 0).desc(),
+                                         Relation.id)\
                                .slice(page*8, (page+1) * 8)
         rels = [rel_count[0] for rel_count in rels_count]
     else:
