@@ -1,7 +1,7 @@
 from flask import Blueprint, Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from db_models import User, Post, Relation, Comment, Vote
-from db_queries import child_rel_query
+from db_queries import child_rel_query, post_actions
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -25,7 +25,7 @@ def dict_by_id(alist, key="id"):
 
 def handle_asks(post, list_of_wants):
     post = Post.query.filter(Post.id==post).one() if isinstance(post, int) else post
-    ret = {"current_post": post.id}
+    ret = {"current_post": post.id, "rels": {}, "posts": {}}
     if "children" in list_of_wants:
         rels = child_rel_query(post.id)
         child_ids = [rel.child_id for rel in rels]
@@ -34,11 +34,24 @@ def handle_asks(post, list_of_wants):
         writeable_post = dict(post.writeable.items() + 
             [("child_rel_ids", [r.id for r in rels])])
         rels = [r.writeable_with_vote_info(current_user) for r in rels]
-        ret["posts"] = dict_by_id(child_posts + [writeable_post])
-        ret["rels"] = dict_by_id(rels)
+        ret["posts"].update(dict_by_id(child_posts + [writeable_post]))
+        ret["rels"].update(dict_by_id(rels))
 
-    if "comments" in list_of_wants:
-        ret["comments"] = [c.writeable for c in post.get_comments()]
+    if "actions" in list_of_wants:
+        actions = post_actions(post.id)
+        rels = Relation.query.filter(
+            Relation.id.in_([(a[0]) for a in actions if a[1] == "Relation"]))
+        rels = [r.writeable_with_vote_info(current_user) for r in rels]
+        posts = Post.query.filter(
+            Post.id.in_([r["child_id"] for r in rels]))
+        posts = [p.writeable for p in posts]
+        comments = Comment.query.filter(
+            Comment.id.in_([a[0] for a in actions if a[1] == "Comment"]))
+        ret["actions"] = actions
+        ret["rels"].update(dict_by_id(rels))
+        ret["posts"].update(dict_by_id(posts))
+        ret["comments"] = dict_by_id([c.writeable for c in comments])
+
     return ret
 
 
@@ -58,7 +71,7 @@ def children_endpoint(post_id):
 @blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
     print "post is %s" % post_id
-    app_state = handle_asks(post_id, ["children", "comments"])
+    app_state = handle_asks(post_id, ["children", "actions"])
     app_state["user"] = writable_current_user()
     print app_state
     return render_template('base.html', app_state=transitify(app_state))

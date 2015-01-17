@@ -28,12 +28,12 @@
 (defn handle-change [e owner field]
   (om/set-state! owner field (.. e -target -value)))
 
-(defn date [dt]
-  (remove-last (str dt) 15))
-
 (defn remove-last [s n]
   (let [end-index (- (count s) n)]
     (subs s 0 end-index)))
+
+(defn date [dt]
+  (remove-last (str dt) 15))
 
 (defn split-text [s]
   (remove empty? (str/split s #"\\n|\n")))
@@ -79,6 +79,7 @@
 
 (println app-state)
 
+
 ;; cursors
 
 (defn current-post []
@@ -97,6 +98,11 @@
 (defn comments-cursor []
   (om/ref-cursor (:comments (om/root-cursor app-state))))
 
+(defn action-cursor [action]
+  (let [root-cursor (om/root-cursor app-state)]
+    (om/ref-cursor (if (= (get action 1) "Relation")
+                    (get (:rels root-cursor) (get action 0))
+                    (get (:comments root-cursor) (get action 0))))))
 
 
 ;; user login and register components
@@ -441,11 +447,11 @@
                                  "▼ Load more posts ▼"]))))])])))))
 
 
-(defn comment-view [comment owner]
+(defn comment-action [comment owner]
   (reify
     om/IRender
     (render [_]
-      (html [:div {:className "comment" :id (str "comment-" (:id comment))}
+      (html [:div {:className "comment action" :id (str "comment-" (:id comment))}
              [:hr]
              [:span {:className "comment-userbit"}
               [:strong {:className "comment-user"}
@@ -454,6 +460,20 @@
                (str " | " (date (:time_posted comment)))]]
              [:div {:className "comment-body"}
               (render-text (:body comment))]]))))
+
+(defn link-action [rel owner]
+  (reify
+    om/IRender
+    (render [_]
+      (html [:div {:className "link action" :id (str "link-" (:id rel))}
+             [:hr]
+             [:strong {:className "link-action-user"}
+              (get-in rel [:linked_by :username])]
+             " linked post "
+             (let [post (post-from-rel rel)]
+               [:a {:href (str "/post/" (:id post))} (:title post)])
+             [:span {:className "link-action-datebit"}
+              (str " at " (date (:time_linked rel)))]]))))
 
 
 (defn comment-form [data owner]
@@ -491,20 +511,24 @@
                [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
 
 
-(defn comments-view [data owner]
+(defn actions-view [data owner]
   (reify
     om/IRender
     (render [_]
-      (let [comments (comments-cursor)]
+            (println "actions view")
+      (let [action-types (map #(get % 1) (:actions data))
+            actions (map action-cursor (:actions data))]
         (html [:div {:className "comments-view row"}
                (if (:user data)
                  (om/build comment-form data)
                  [:strong "You must be logged in to comment on a post"])
-               (if-not (empty? comments)
-                 [:span [:h4 "Comments:"]
-                  (for [comment comments]
-                    (om/build comment-view comment))]
-                 [:div "No comments yet"])])))))
+               (if-not (empty? actions)
+                 [:span [:h4 "Actions:"]
+                  (for [[action-type action] (map list action-types actions)]
+                    (if (= action-type "Comment")
+                      (om/build comment-action action)
+                      (om/build link-action action)))]
+                 [:div "No actions yet"])])))))
 
 (defn submit-form [data owner {:keys [close-chan] :as opts}]
   (reify
@@ -645,7 +669,7 @@
     (render [this]
       (html [:div {:className "post-section medium-7 columns"}
              (om/build post-view data)
-             (om/build comments-view data)]))))
+             (om/build actions-view data)]))))
 
 (defn children-section [data owner]
   (reify
@@ -726,7 +750,6 @@
                           {:opts {:modal-view ((:modal data) modal-map)}}))]))))
 
 @app-state
-
 
 (defn start [target state app]
   (om/root app state {:target target}))
