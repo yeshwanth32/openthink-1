@@ -9119,3 +9119,13 @@ th.hide-for-touch {
 .register-section div {
   padding: 0;
 }
+
+/* line 59, ../style/scss/app.scss */
+.comments-view {
+  padding-right: 1em;
+}
+
+/* line 62, ../style/scss/app.scss */
+.pagination {
+  display: inline;
+}
