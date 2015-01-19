@@ -1,4 +1,6 @@
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import literal_column
+from sqlalchemy.types import Unicode
 from db_models import *
 
 
@@ -21,3 +23,22 @@ def child_rel_query(post_id, page=0, sort_by='top'):
                          .filter(Relation.parent_id==post_id)\
                          .slice(page*8, (page+1) * 8).all()
     return rels
+
+def actions_query(post_id):
+    dbq = db.session
+    comments = dbq.query(Comment.id, Comment.time_posted.label("time"),
+                         literal_column("'Comment'", Unicode).label("t"))\
+                  .filter(Comment.post_id==post_id)
+    rels = dbq.query(Relation.id, Relation.time_linked.label("time"),
+                     literal_column("'Relation'", Unicode).label("t"))\
+              .filter(Relation.parent_id==post_id)
+    q = comments.union(rels)
+    return q
+
+def post_actions(post_id, page=1):
+    actions = actions_query(post_id).order_by("time")\
+                                   .slice((page-1)*20, page*20).all()
+    return [[action[0], action[2]] for action in actions]
+
+def total_actions(post_id):
+    return int(actions_query(post_id).count())

@@ -1,13 +1,16 @@
 from flask import Blueprint, Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from db_models import User, Post, Relation, Comment, Vote
-from db_queries import child_rel_query
+from db_queries import child_rel_query, post_actions, total_actions
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
+import math
 from flask.ext.login import login_user, logout_user, login_required, current_user
 
 blueprint = Blueprint('views', __name__)
+
+ACTIONS_PER_PAGE = 20
 
 def transitify(val, format='json'):
     io = StringIO()
@@ -23,27 +26,67 @@ def writable_current_user():
 def dict_by_id(alist, key="id"):
     return dict([(item[key], item) for item in alist])
 
-def handle_asks(post, list_of_wants):
+def actions_with_data(post_id, page):
+    actions = post_actions(post_id, page=int(page))
+    posts = []
+    rels = [(a[0]) for a in actions if a[1] == "Relation"]
+    if rels:
+        rels = Relation.query.filter(Relation.id.in_(rels))
+        posts = Post.query.filter(
+            Post.id.in_([r.child_id for r in rels]))
+    comments = [(a[0]) for a in actions if a[1] == "Comment"]
+    if comments:
+        comments = Comment.query.filter(Comment.id.in_(comments))
+    return {
+        "actions": actions, 
+        "rels": [r.writeable_with_vote_info(current_user) for r in rels], 
+        "posts": [p.writeable for p in posts], 
+        "comments": [c.writeable for c in comments],
+        "page": int(page)
+    }
+
+def handle_asks(post, list_of_wants, page):
     post = Post.query.filter(Post.id==post).one() if isinstance(post, int) else post
-    ret = {"current_post": post.id}
+    ret = {"current_post": post.id, "rels": {}, "posts": {}}
     if "children" in list_of_wants:
         rels = child_rel_query(post.id)
         child_ids = [rel.child_id for rel in rels]
         children = Post.query.filter(Post.id.in_(child_ids)).all()
         child_posts = [p.writeable for p in children]
-        writeable_post = dict(post.writeable.items() + 
-            [("child_rel_ids", [r.id for r in rels])])
+        ret["link_ids"] = [r.id for r in rels]
         rels = [r.writeable_with_vote_info(current_user) for r in rels]
-        ret["posts"] = dict_by_id(child_posts + [writeable_post])
-        ret["rels"] = dict_by_id(rels)
+        ret["posts"].update(dict_by_id(child_posts + [post.writeable]))
+        ret["rels"].update(dict_by_id(rels))
 
-    if "comments" in list_of_wants:
-        ret["comments"] = [c.writeable for c in post.get_comments()]
+    if "actions" in list_of_wants:
+        action_info = actions_with_data(post.id, page)
+        ret["actions"] = action_info["actions"]
+        ret["rels"].update(dict_by_id(action_info["rels"]))
+        ret["posts"].update(dict_by_id(action_info["posts"]))
+        ret["action_count"] = total_actions(post.id)
+        ret["page"] = int(page)
+        ret["comments"] = dict_by_id(action_info["comments"])
+
     return ret
 
+@blueprint.route('/actions/<int:post_id>')
+def actions_endpoint(post_id):
+    action_count = total_actions(post_id)
+    page = request.args.get('page', math.ceil(float(action_count) / 
+                                              float(ACTIONS_PER_PAGE)))
+    print "page is %s" % page
+    action_info = actions_with_data(post_id, page)
+    return transitify({
+        "actions": action_info["actions"], 
+        "action_count": action_count, 
+        "posts": dict_by_id(action_info["posts"]),
+        "rels": dict_by_id(action_info["rels"]),
+        "comments": dict_by_id(action_info["comments"]),
+        "page": int(page)
+    })
 
-@blueprint.route('/children/<int:post_id>')
-def children_endpoint(post_id):
+@blueprint.route('/links/<int:post_id>')
+def links_endpoint(post_id):
     sort_by = request.args.get('sort', 'top')
     page = request.args.get('page', 0)
     rels = child_rel_query(post_id, page=int(page), sort_by=sort_by)
@@ -58,7 +101,11 @@ def children_endpoint(post_id):
 @blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
     print "post is %s" % post_id
-    app_state = handle_asks(post_id, ["children", "comments"])
+    req_data = get_post_data_from_req(request)
+    page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
+                                          float(ACTIONS_PER_PAGE)))
+    print "page is %s" % page
+    app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
     print app_state
     return render_template('base.html', app_state=transitify(app_state))
@@ -69,6 +116,8 @@ def index():
     return post_page(Post.root_post_id())
 
 def get_post_data_from_req(request):
+    if not request.data:
+        return {}
     reader = Reader()
     return reader.read(StringIO(request.data))
 
@@ -109,7 +158,8 @@ def submit_post():
     if isinstance(post, basestring):
         return transitify({"error": post, "error_type": "create-post"})
 
-    relation = Relation.link_posts(req_data.get('parent', Post.root_post_id()), 
+    post_id = req_data.get('parent', Post.root_post_id())
+    relation = Relation.link_posts(post_id, 
                                    post, 
                                    current_user)
     if isinstance(relation, basestring):
@@ -117,7 +167,10 @@ def submit_post():
 
     app_state = {"success": "posted successfully"}
     if req_data.get('current_post') and req_data.get('ask_for'):
-        app_state.update(handle_asks(req_data.get('current_post'), req_data.get('ask_for')))
+        page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
+                                              float(ACTIONS_PER_PAGE)))
+        app_state.update(handle_asks(req_data.get('current_post'), 
+                                    req_data.get('ask_for'), page))
     return transitify(app_state)
 
 def get_post_id_from_text(s):
@@ -126,14 +179,18 @@ def get_post_id_from_text(s):
 @blueprint.route("/link-post", methods=["POST"])
 def link_post():
     req_data = get_post_data_from_req(request)
-    relation = Relation.link_posts(req_data.get('parent'),
+    parent_id = req_data.get('parent')
+    relation = Relation.link_posts(parent_id,
         get_post_id_from_text(req_data.get('child-text')), current_user)
     if isinstance(relation, basestring):
         return transitify({"error": relation})
 
     app_state = {"success": "linked successfully"}
     if req_data.get('current_post') and req_data.get('ask_for'):
-        app_state.update(handle_asks(req_data.get('current_post'), req_data.get('ask_for')))
+        page = req_data.get("page", math.ceil(float(total_actions(parent_id)) / 
+                                              float(ACTIONS_PER_PAGE)))
+        app_state.update(handle_asks(req_data.get('current_post'), 
+                                     req_data.get('ask_for'), page))
     return transitify(app_state)
 
 @blueprint.route("/post/<int:post_id>/comment", methods=["POST"])
