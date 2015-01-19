@@ -94,8 +94,11 @@
                                   (om/set-state! owner :state :ready)
                                   (if (contains? resp :error)
                                     (om/set-state! owner :error (:error resp))
-                                    (do (om/transact! data #(merge % resp))
-                                        (put! close-chan 1)))))})))))
+                                    (do
+                                      (om/transact! data :rels #(merge % (:rels resp)))
+                                      (om/transact! data :posts #(merge % (:posts resp)))
+                                      (om/update! data :link_ids (:new_rel_ids resp))
+                                      (put! close-chan 1)))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]

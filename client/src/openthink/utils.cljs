@@ -42,6 +42,10 @@
   (fn [e]
     (when (== (.-keyCode e) 13) (f))))
 
+(defn put-nil! [chan value]
+  (do (put! chan value)
+    false))
+
 (defn unescape-html
   "change html character entities into special characters"
   [text]

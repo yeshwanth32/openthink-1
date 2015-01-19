@@ -6,7 +6,7 @@
             [openthink.views.modal :as modal]
             [openthink.views.header :refer [header]]
             [openthink.views.post :refer [post-section]]
-            [openthink.views.links :refer [children-section]]))
+            [openthink.views.links :refer [links-section]]))
 
 (enable-console-print!)
 
@@ -20,7 +20,7 @@
     (render [this]
       (html [:div {:className "main-content row"}
              (om/build post-section data)
-             (om/build children-section data)]))))
+             (om/build links-section data)]))))
 
 ;; build and start application
 
