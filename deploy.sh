@@ -5,7 +5,9 @@ then
 	exit
 fi
 
-git merge origin/master
+git merge origin/master --no-edit
+rm server/static/app-dev.js
+rm server/static/app.js
 cd client/
 lein clean
 lein cljsbuild once release
