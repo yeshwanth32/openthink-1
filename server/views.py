@@ -2,6 +2,7 @@ from flask import Blueprint, Flask, request, session, g, redirect, url_for, abor
      render_template, flash, jsonify
 from db_models import User, Post, Relation, Comment, Vote
 from db_queries import child_rel_query, post_actions, total_actions
+from utils import is_number, route_from
 from transit.writer import Writer
 from transit.reader import Reader
 from StringIO import StringIO
@@ -180,14 +181,23 @@ def submit_post():
     return transitify(app_state)
 
 def get_post_id_from_text(s):
-    return int(s)
+    if is_number(s):
+        return int(s)
+    rt = route_from(s, method="GET")
+    if rt[0] == 'views.post_page':
+        return rt[1]['post_id']
+    elif rt[0] == 'views.index':
+        return Post.root_post_id()
 
 @blueprint.route("/link-post", methods=["POST"])
 def link_post():
     req_data = get_post_data_from_req(request)
     parent_id = req_data.get('parent')
-    relation = Relation.link_posts(parent_id,
-        get_post_id_from_text(req_data.get('child-text')), current_user)
+    relation = "Post not found"
+    child_id = get_post_id_from_text(req_data.get('child-text'))
+    if child_id:
+        print "linking post %s" % child_id
+        relation = Relation.link_posts(parent_id, child_id, current_user)
     if isinstance(relation, basestring):
         return transitify({"error": relation})
 
