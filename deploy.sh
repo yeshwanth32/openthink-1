@@ -23,6 +23,6 @@ git commit -m "update static"
 git push origin release
 
 cd devops/
-ansible-playbook ansible/deploy.yml -i ansible/dev
+ansible-playbook ansible/deploy.yml -i ansible/prod
 
 cd ..
