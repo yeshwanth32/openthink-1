@@ -7,7 +7,7 @@ from flask.ext.login import LoginManager
 from localsettings import SETTINGS
 
 # configuration
-DEBUG = True
+DEBUG = SETTINGS["DEBUG"]
 # SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/openthink.db'
 SQLALCHEMY_DATABASE_URI = SETTINGS["DB_CONNECTION_STRING"]
 

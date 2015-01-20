@@ -14,12 +14,20 @@
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 
   :source-paths ["src"]
+  :hooks [leiningen.cljsbuild]
 
   :cljsbuild {
-    :builds [{:id "openthink"
+    :builds [{:id "dev"
               :source-paths ["src"]
               :compiler {
                 :output-to "../server/static/openthink.js"
                 :output-dir "../server/static/out"
                 :optimizations :none
-                :source-map true}}]})
+                :source-map true}}
+            { :id "release"
+              :source-paths ["src"]
+              :compiler {
+                :output-to "../server/static/app.js"
+                :optimizations :advanced
+                :pretty-print false
+                :preamble ["react/react.min.js"]}}]})

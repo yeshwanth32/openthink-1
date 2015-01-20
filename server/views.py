@@ -100,6 +100,7 @@ def links_endpoint(post_id):
 
 @blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
+    from localsettings import SETTINGS
     print "post is %s" % post_id
     req_data = get_post_data_from_req(request)
     page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
@@ -108,7 +109,8 @@ def post_page(post_id):
     app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
     print app_state
-    return render_template('base.html', app_state=transitify(app_state))
+    return render_template('base.html', debug=SETTINGS["DEBUG"],
+                            app_state=transitify(app_state))
 
 @blueprint.route('/')
 def index():
