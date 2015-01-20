@@ -36,6 +36,7 @@ def actions_query(post_id):
     return q
 
 def post_actions(post_id, page=1):
+    page = 1 if not page else page
     actions = actions_query(post_id).order_by("time")\
                                    .slice((page-1)*20, page*20).all()
     return [[action[0], action[2]] for action in actions]

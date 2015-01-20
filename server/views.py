@@ -51,7 +51,9 @@ def handle_asks(post, list_of_wants, page):
     if "children" in list_of_wants:
         rels = child_rel_query(post.id)
         child_ids = [rel.child_id for rel in rels]
-        children = Post.query.filter(Post.id.in_(child_ids)).all()
+        children = []
+        if child_ids:
+            children = Post.query.filter(Post.id.in_(child_ids)).all()
         child_posts = [p.writeable for p in children]
         ret["link_ids"] = [r.id for r in rels]
         rels = [r.writeable_with_vote_info(current_user) for r in rels]
@@ -90,7 +92,9 @@ def links_endpoint(post_id):
     sort_by = request.args.get('sort', 'top')
     page = request.args.get('page', 0)
     rels = child_rel_query(post_id, page=int(page), sort_by=sort_by)
-    posts = Post.query.filter(Post.id.in_([r.child_id for r in rels])).all()
+    posts = []
+    if rels:
+        posts = Post.query.filter(Post.id.in_([r.child_id for r in rels])).all()
     return transitify({
         "posts": dict_by_id([p.writeable for p in posts]), 
         "rels": dict_by_id(
@@ -100,6 +104,7 @@ def links_endpoint(post_id):
 
 @blueprint.route('/post/<int:post_id>')
 def post_page(post_id):
+    from localsettings import SETTINGS
     print "post is %s" % post_id
     req_data = get_post_data_from_req(request)
     page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
@@ -108,7 +113,8 @@ def post_page(post_id):
     app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
     print app_state
-    return render_template('base.html', app_state=transitify(app_state))
+    return render_template('base.html', debug=SETTINGS["DEBUG"],
+                            app_state=transitify(app_state))
 
 @blueprint.route('/')
 def index():
