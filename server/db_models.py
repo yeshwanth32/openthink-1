@@ -200,12 +200,10 @@ class Post(Model):
         return cls.create(title=title, body=text, user=user)
 
     @property
-    def writeable(self, replace_newline=True):
+    def writeable(self):
         attrs = ("id", "title", "body", "user_id", "time_posted")
         ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
-        if replace_newline:
-            ret_dict["body"] = ret_dict["body"].replace("\n","\\n")
         return ret_dict
 
     def __repr__(self):
@@ -305,13 +303,11 @@ class Comment(Model):
         return cls.create(**kw)
 
     @property
-    def writeable(self, replace_newline=True):
+    def writeable(self):
         attrs = ("id", "body", "post_id", "user", "time_posted")
         ret_dict = {k: getattr(self, k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
         ret_dict["user"] = ret_dict["user"].writeable
-        if replace_newline:
-            ret_dict["body"] = ret_dict["body"].replace("\n","\\n")
         return ret_dict
 
     def __repr__(self):

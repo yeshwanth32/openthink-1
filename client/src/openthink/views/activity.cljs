@@ -4,8 +4,10 @@
             [ajax.core :refer [GET POST]]
             [om.core :as om]
             [sablono.core :as html :refer-macros [html]]
+            [markdown.core :refer [md->html]]
             [openthink.cursors :as curs]
-            [openthink.utils :as util]))
+            [openthink.utils :as util]
+            [openthink.views.editor :as editor]))
 
 (def ACTIONS-PER-PAGE 20)
 
@@ -21,7 +23,8 @@
               [:span {:className "comment-datebit"}
                (str " | " (util/date (:time_posted comment)))]]
              [:div {:className "comment-body"}
-              (util/render-text (:body comment))]]))))
+              [:p {:dangerouslySetInnerHTML
+                   #js {:__html (md->html (:body comment))}}]]]))))
 
 (defn link-action [rel owner]
   (reify
@@ -42,7 +45,7 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:comment-chan (chan) :body ""})
+      {:comment-chan (chan) :text ""})
     om/IWillMount
     (will-mount [_]
       (let [comment-chan (om/get-state owner :comment-chan)]
@@ -51,7 +54,7 @@
               (println "making comment")
               (POST (str "/post/" (:current_post data) "/comment")
                     {:response-format :transit
-                     :params {"body" (om/get-state owner :body)}
+                     :params {"body" (om/get-state owner :text)}
                      :handler (fn [resp]
                                 (println "comment-form returned")
                                 (println resp)
@@ -67,9 +70,10 @@
              [:div {:className "row"}
               [:div {:className "large-11 columns"}
                ;[:label "Submit a comment:"]
-               [:textarea {:placeholder "Post a comment" :name "comment-body"
-                           :value (om/get-state owner :body)
-                           :onChange #(util/handle-change % owner :body)}]
+               (om/build editor/editor-view data
+                         {:init-state
+                          {:placeholder "Post a comment"
+                           :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
 
 (defn gen-pagination-numbers [action-count cur-page]

@@ -59,9 +59,33 @@
 .comments-view {
 	padding-right: 1em;
 }
+
 .pagination {
 	display: inline;
 }
+
+.editor-bar {
+	.editor-btn {
+		padding: 0px;
+
+	}
+	.editor-bar-item {
+		margin: 0 .2em 0 .2em;
+		margin-bottom: 0px;
+	}
+	.editor-bar-item.selected i {
+		color: $darker-blue;
+	}
+	padding: .2em .25em .2em .25em;
+	margin-left: 0px;
+	margin-bottom: 0px;
+	border: 1px solid scale-color(gray, $lightness: 50%);
+}
+
+i.large {
+	font-size: 1.5em; 
+}
+
 
 // Or selectively include components
 // @import
