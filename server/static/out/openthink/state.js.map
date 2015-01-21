@@ -4,7 +4,7 @@
  "sources":["state.cljs"],
  "lineCount":11,
  "mappings":
- ";AAAA;;;;;;AAIA,AAAKA,4BACH,kJAAA,jIAAMC,YAAUC,sBACVC,MAAI,mCAAA,nCAACC,yFACT,wSAAKH,xCACAI,rCACA,qCAAA,rCAACC,iCAAOH,xEACRI,pJACA,0BAAA,2CAAA,iEAAA,cAAA,pJAACC,zBACDC",
+ ";AAAA;;;;AAIA,AAAKA,4BACH,iBAAMC,YAAUC;IACVC,MAAI,mCAAA,nCAACC;AADX,AAEE,wSAAKH,xCACAI,rCACA,qCAAA,rCAACC,iCAAOH,xEACRI,pJACA,0BAAA,2CAAA,iEAAA,cAAA,pJAACC,zBACDC",
  "names":
  ["openthink.state/app-state", "init-data", "js/initial_app_state",
   "rdr", "cognitect.transit/reader", "openthink.utils/unescape-html",

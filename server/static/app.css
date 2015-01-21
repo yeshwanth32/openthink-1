@@ -9125,7 +9125,33 @@ th.hide-for-touch {
   padding-right: 1em;
 }
 
-/* line 62, ../style/scss/app.scss */
+/* line 63, ../style/scss/app.scss */
 .pagination {
   display: inline;
+}
+
+/* line 67, ../style/scss/app.scss */
+.editor-bar {
+  padding: .2em .25em .2em .25em;
+  margin-left: 0px;
+  margin-bottom: 0px;
+  border: 1px solid silver;
+}
+/* line 68, ../style/scss/app.scss */
+.editor-bar .editor-btn {
+  padding: 0px;
+}
+/* line 72, ../style/scss/app.scss */
+.editor-bar .editor-bar-item {
+  margin: 0 .2em 0 .2em;
+  margin-bottom: 0px;
+}
+/* line 76, ../style/scss/app.scss */
+.editor-bar .editor-bar-item.selected i {
+  color: #4b6784;
+}
+
+/* line 85, ../style/scss/app.scss */
+i.large {
+  font-size: 1.5em;
 }

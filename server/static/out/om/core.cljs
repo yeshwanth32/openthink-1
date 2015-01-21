@@ -1,5 +1,6 @@
 (ns om.core
-  (:require [om.dom :as dom :include-macros true])
+  (:require [om.dom :as dom :include-macros true]
+            [goog.dom :as gdom])
   (:import [goog.ui IdGenerator]))
 
 (def ^{:dynamic true :private true} *parent* nil)
@@ -150,46 +151,57 @@
 
 (defn transact*
   ([state cursor korks f tag]
-     (let [old-state @state
-           path (into (om.core/path cursor) korks)
-           ret (cond
-                 (satisfies? IOmSwap state) (-om-swap! state cursor korks f tag)
-                 (empty? path) (swap! state f)
-                 :else (swap! state update-in path f))]
-       (when-not (= ret ::defer)
-         (let [tx-data {:path path
-                        :old-value (get-in old-state path)
-                        :new-value (get-in @state path)
-                        :old-state old-state
-                        :new-state @state}]
-           (if-not (nil? tag)
-             (notify* cursor (assoc tx-data :tag tag))
-             (notify* cursor tx-data)))))))
+   (let [old-state @state
+         path (into (om.core/path cursor) korks)
+         ret (cond
+               (satisfies? IOmSwap state) (-om-swap! state cursor korks f tag)
+               (empty? path) (swap! state f)
+               :else (swap! state update-in path f))]
+     (when-not (= ret ::defer)
+       (let [tx-data {:path path
+                      :old-value (get-in old-state path)
+                      :new-value (get-in @state path)
+                      :old-state old-state
+                      :new-state @state}]
+         (if-not (nil? tag)
+           (notify* cursor (assoc tx-data :tag tag))
+           (notify* cursor tx-data)))))))
 
 (defn cursor? [x]
   (satisfies? ICursor x))
 
+(defn component? [x]
+  (aget x "isOmComponent"))
+
 (defn ^:private children [node]
   (let [c (.. node -props -children)]
-    (if (fn? c)
+    (if (ifn? c)
       (set! (.. node -props -children) (c node))
       c)))
 
 (defn get-props
   "Given an owning Pure node return the Om props. Analogous to React
    component props."
-  [x]
-  (aget (.-props x) "__om_cursor"))
+  ([x]
+   {:pre [(component? x)]}
+   (aget (.-props x) "__om_cursor"))
+  ([x korks]
+   {:pre [(component? x)]}
+   (let [korks (if (sequential? korks) korks [korks])]
+     (cond-> (aget (.-props x) "__om_cursor")
+       (seq korks) (get-in korks)))))
 
 (defn get-state
   "Returns the component local state of an owning component. owner is
    the component. An optional key or sequence of keys may be given to
    extract a specific value. Always returns pending state."
   ([owner]
-     (-get-state owner))
+   {:pre [(component? owner)]}
+   (-get-state owner))
   ([owner korks]
-     (let [ks (if (sequential? korks) korks [korks])] 
-       (-get-state owner ks))))
+   {:pre [(component? owner)]}
+   (let [ks (if (sequential? korks) korks [korks])] 
+     (-get-state owner ks))))
 
 (defn get-shared
   "Takes an owner and returns a map of global shared values for a
@@ -256,7 +268,8 @@
 (declare unobserve)
 
 (def pure-methods
-  {:getDisplayName
+  {:isOmComponent true
+   :getDisplayName
    (fn []
      (this-as this
        (let [c (children this)]
@@ -287,7 +300,7 @@
          (merge-props-state this next-props)
          (if (satisfies? IShouldUpdate c)
            (should-update c
-             (get-props #js {:props next-props})
+             (get-props #js {:props next-props :isOmComponent true})
              (-get-state this))
            (let [cursor      (aget props "__om_cursor")
                  next-cursor (aget next-props "__om_cursor")]
@@ -342,7 +355,7 @@
          (when (satisfies? IWillUpdate c)
            (let [state (.-state this)]
              (will-update c
-               (get-props #js {:props next-props})
+               (get-props #js {:props next-props :isOmComponent true})
                (-get-state this)))))
        (merge-pending-state this)
        (update-refs this)))
@@ -353,7 +366,7 @@
          (when (satisfies? IDidUpdate c)
            (let [state (.-state this)]
              (did-update c
-               (get-props #js {:props prev-props})
+               (get-props #js {:props prev-props :isOmComponent true})
                (or (aget state "__om_prev_state")
                  (aget state "__om_state")))))
          (aset (.-state this) "__om_prev_state" nil))))
@@ -363,7 +376,7 @@
        (let [c (children this)]
          (when (satisfies? IWillReceiveProps c)
            (will-receive-props c
-             (get-props #js {:props next-props}))))))
+             (get-props #js {:props next-props :isOmComponent true}))))))
    :render
    (fn []
      (this-as this
@@ -441,6 +454,7 @@
       (swap! gstate update-in spath
         (fn [states]
           (-> states
+            (assoc :previous-state (:render-state states))
             (assoc :render-state
               (merge (:render-state states) (:pending-state states)))
             (dissoc :pending-state)))))))
@@ -473,11 +487,10 @@
     :componentWillUnmount
     (fn []
       (this-as this
-        (let [c     (children this)
-              spath [:state-map (react-id this)]]
+        (let [c (children this)]
           (when (satisfies? IWillUnmount c)
             (will-unmount c))
-          (swap! (get-gstate this) update-in spath dissoc)
+          (swap! (get-gstate this) dissoc :state-map (react-id this))
           (when-let [refs (seq (aget (.-state this) "__om_refs"))]
             (doseq [ref refs]
               (unobserve this ref))))))
@@ -489,7 +502,7 @@
          (when (satisfies? IWillUpdate c)
            (let [state (.-state this)]
              (will-update c
-               (get-props #js {:props next-props})
+               (get-props #js {:props next-props :isOmComponent true})
                (-get-state this)))))
        (no-local-merge-pending-state this)
        (update-refs this)))
@@ -503,9 +516,9 @@
           (when (satisfies? IDidUpdate c)
             (let [state (.-state this)]
               (did-update c
-                (get-props #js {:props prev-props})
+                (get-props #js {:props prev-props :isOmComponent true})
                 (or (:previous-state states)
-                  (:render-state states)))))
+                    (:render-state states)))))
           (when (:previous-state states)
             (swap! gstate update-in spath dissoc :previous-state)))))))
 
@@ -609,6 +622,9 @@
   IHash
   (-hash [_]
     (hash value))
+  IKVReduce
+  (-kv-reduce [_ f init]
+    (-kv-reduce value f init))
   IPrintWithWriter
   (-pr-writer [_ writer opts]
     (-pr-writer value writer opts)))
@@ -683,6 +699,9 @@
   IHash
   (-hash [_]
     (hash value))
+  IKVReduce
+  (-kv-reduce [_ f init]
+    (-kv-reduce value f init))
   IPrintWithWriter
   (-pr-writer [_ writer opts]
     (-pr-writer value writer opts)))
@@ -728,6 +747,7 @@
 (defn root-cursor
   "Given an application state atom return a root cursor for it."
   [atom]
+  {:pre [(satisfies? IDeref atom)]}
   (to-cursor @atom atom []))
 
 (def _refs (atom {}))
@@ -756,6 +776,7 @@
   properties and methods of the cursor. Reference cursors may be
   observed via om.core/observe."
   [cursor]
+  {:pre [(cursor? cursor)]}
   (if (satisfies? IOmRef cursor)
     cursor
     (let [path    (path cursor)
@@ -803,6 +824,7 @@
   "Given a component and a reference cursor have the component observe
   the reference cursor for any data changes."
   [c ref]
+  {:pre [(component? c) (cursor? ref)]}
   (add-ref-to-component! c ref)
   (-add-dep! ref c)
   ref)
@@ -821,10 +843,15 @@
 (defn ^:private get-renderT [state]
   (or (.-om$render$T state) 0))
 
-(defn ^:private render-all [state]
-  (set! refresh-queued false)
-  (doseq [f @refresh-set] (f))
-  (set! (.-om$render$T state) (inc (get-renderT state))))
+(defn render-all
+  "Force a render of *all* roots. Usage of this function is almost
+  never recommended."
+  ([] (render-all nil))
+  ([state]
+   (set! refresh-queued false)
+   (doseq [f @refresh-set] (f))
+   (when-not (nil? state)
+     (set! (.-om$render$T state) (inc (get-renderT state))))))
 
 (def ^:private roots (atom {}))
 
@@ -837,7 +864,7 @@
          " does not return valid instance")))
 
 (defn ^:private valid-opts? [m]
-  (every? #{:key :react-key :fn :init-state :state
+  (every? #{:key :react-key :key-fn :fn :init-state :state
             :opts :shared ::index :instrument :descriptor}
     (keys m)))
 
@@ -847,67 +874,83 @@
 (defn get-descriptor
   ([f] (get-descriptor f nil))
   ([f descriptor]
-     (when (nil? (aget f "om$descriptor"))
-       (aset f "om$descriptor"
-         (js/React.createClass (or descriptor *descriptor* pure-descriptor))))
-     (aget f "om$descriptor")))
+   (when (nil? (aget f "om$descriptor"))
+     (aset f "om$descriptor"
+       (js/React.createFactory
+         (js/React.createClass
+           (or descriptor *descriptor* pure-descriptor)))))
+   (aget f "om$descriptor")))
+
+(defn getf
+  ([f cursor]
+   (if (instance? MultiFn f)
+     (let [dv ((.-dispatch-fn f) cursor nil)]
+      (get-method f dv))
+     f))
+  ([f cursor opts]
+   (if (instance? MultiFn f)
+     (let [dv ((.-dispatch-fn f) cursor nil opts)]
+       (get-method f dv))
+     f)))
 
 (defn build*
   ([f cursor] (build* f cursor nil))
   ([f cursor m]
-     (assert (valid-opts? m)
-       (apply str "build options contains invalid keys, only :key, :react-key, "
-         ":fn, :init-state, :state, and :opts allowed, given "
-         (interpose ", " (keys m))))
-     (cond
-       (nil? m)
-       (let [shared (get-shared *parent*)
-             ctor   (get-descriptor f)]
-         (ctor #js {:__om_cursor cursor
-                    :__om_shared shared
-                    :__om_root_key *root-key*
-                    :__om_app_state *state*
-                    :__om_descriptor *descriptor*
-                    :__om_instrument *instrument*
-                    :children
-            (fn [this]
-              (let [ret (f cursor this)]
-                (valid-component? ret f)
-                ret))}))
+   {:pre [(ifn? f) (or (nil? m) (map? m))]}
+   (assert (valid-opts? m)
+     (apply str "build options contains invalid keys, only :key, :key-fn :react-key, "
+       ":fn, :init-state, :state, and :opts allowed, given "
+       (interpose ", " (keys m))))
+   (cond
+     (nil? m)
+     (let [shared (get-shared *parent*)
+           ctor   (get-descriptor (getf f cursor))]
+       (ctor #js {:__om_cursor cursor
+                  :__om_shared shared
+                  :__om_root_key *root-key*
+                  :__om_app_state *state*
+                  :__om_descriptor *descriptor*
+                  :__om_instrument *instrument*
+                  :children
+                  (fn [this]
+                    (let [ret (f cursor this)]
+                      (valid-component? ret f)
+                      ret))}))
 
-       :else
-       (let [{:keys [key state init-state opts]} m
-             dataf   (get m :fn)
-             cursor' (if-not (nil? dataf)
-                       (if-let [i (::index m)]
-                         (dataf cursor i)
-                         (dataf cursor))
-                       cursor)
-             rkey    (if-not (nil? key)
-                       (get cursor' key)
-                       (get m :react-key))
-             shared  (or (:shared m) (get-shared *parent*))
-             ctor    (get-descriptor f (:descriptor m))]
-         (ctor #js {:__om_cursor cursor'
-                    :__om_index (::index m)
-                    :__om_init_state init-state
-                    :__om_state state
-                    :__om_shared shared
-                    :__om_root_key *root-key*
-                    :__om_app_state *state*
-                    :__om_descriptor *descriptor*
-                    :__om_instrument *instrument*
-                    :key rkey
-                    :children
-            (if (nil? opts)
-              (fn [this]
-                (let [ret (f cursor' this)]
-                  (valid-component? ret f)
-                  ret))
-              (fn [this]
-                (let [ret (f cursor' this opts)]
-                  (valid-component? ret f)
-                  ret)))})))))
+     :else
+     (let [{:keys [key key-fn state init-state opts]} m
+           dataf   (get m :fn)
+           cursor' (if-not (nil? dataf)
+                     (if-let [i (::index m)]
+                       (dataf cursor i)
+                       (dataf cursor))
+                     cursor)
+           rkey    (cond
+                     (not (nil? key)) (get cursor' key)
+                     (not (nil? key-fn)) (key-fn cursor')
+                     :else (get m :react-key))
+           shared  (or (:shared m) (get-shared *parent*))
+           ctor    (get-descriptor (getf f cursor' opts) (:descriptor m))]
+       (ctor #js {:__om_cursor cursor'
+                  :__om_index (::index m)
+                  :__om_init_state init-state
+                  :__om_state state
+                  :__om_shared shared
+                  :__om_root_key *root-key*
+                  :__om_app_state *state*
+                  :__om_descriptor *descriptor*
+                  :__om_instrument *instrument*
+                  :key (or rkey js/undefined) ;; annoying
+                  :children
+                  (if (nil? opts)
+                    (fn [this]
+                      (let [ret (f cursor' this)]
+                        (valid-component? ret f)
+                        ret))
+                    (fn [this]
+                      (let [ret (f cursor' this opts)]
+                        (valid-component? ret f)
+                        ret)))})))))
 
 (defn build
   "Builds an Om component. Takes an IRender/IRenderState instance
@@ -945,12 +988,13 @@
   "
   ([f x] (build f x nil))
   ([f x m]
-     (if-not (nil? *instrument*)
-       (let [ret (*instrument* f x m)]
-         (if (= ret ::pass)
-           (build* f x m)
-           ret))
-       (build* f x m))))
+   {:pre [(ifn? f) (or (nil? m) (map? m))]}
+   (if-not (nil? *instrument*)
+     (let [ret (*instrument* f x m)]
+       (if (= ret ::pass)
+         (build* f x m)
+         ret))
+     (build* f x m))))
 
 (defn build-all
   "Build a sequence of components. f is the component constructor
@@ -958,9 +1002,10 @@
    same as provided to om.core/build."
   ([f xs] (build-all f xs nil))
   ([f xs m]
-    (map (fn [x i]
-           (build f x (assoc m ::index i)))
-      xs (range))))
+   {:pre [(ifn? f) (or (nil? m) (map? m))]}
+   (map (fn [x i]
+          (build f x (assoc m ::index i)))
+     xs (range))))
 
 (defn ^:private setup [state key tx-listen]
   (when-not (satisfies? INotify state)
@@ -1044,6 +1089,9 @@
                  intercept all calls to om.core/build. This function should
                  correspond to the three arity version of om.core/build.
    :adapt      - a function to adapt the root cursor
+   :raf        - override requestAnimationFrame based rendering. If
+                 false setTimeout will be use. If given a function
+                 will be invoked instead.
 
    Example:
 
@@ -1052,7 +1100,8 @@
        ...)
      {:message :hello}
      {:target js/document.body})"
-  ([f value {:keys [target tx-listen path instrument descriptor adapt] :as options}]
+  ([f value {:keys [target tx-listen path instrument descriptor adapt raf] :as options}]
+    (assert (ifn? f) "First argument must be a function")
     (assert (not (nil? target)) "No target specified to om.core/root")
     ;; only one root render loop per target
     (let [roots' @roots]
@@ -1064,7 +1113,7 @@
                   (atom value))
           state (setup state watch-key tx-listen)
           adapt (or adapt identity)
-          m     (dissoc options :target :tx-listen :path :adapt)
+          m     (dissoc options :target :tx-listen :path :adapt :raf)
           ret   (atom nil)
           rootf (fn rootf []
                   (swap! refresh-set disj rootf)
@@ -1117,9 +1166,16 @@
             (swap! refresh-set conj rootf))
           (when-not refresh-queued
             (set! refresh-queued true)
-            (if (exists? js/requestAnimationFrame)
-              (js/requestAnimationFrame #(render-all state))
-              (js/setTimeout #(render-all state) 16)))))
+            (cond
+              (or (false? raf)
+                  (not (exists? js/requestAnimationFrame)))
+              (js/setTimeout #(render-all state) 16)
+
+              (fn? raf)
+              (raf)
+
+              :else
+              (js/requestAnimationFrame #(render-all state))))))
       ;; store fn to remove previous root render loop
       (swap! roots assoc target
         (fn []
@@ -1133,42 +1189,48 @@
 (defn detach-root
   "Given a DOM target remove its render loop if one exists."
   [target]
+  {:pre [(gdom/isElement target)]}
   (when-let [f (get @roots target)]
     (f)))
 
+(defn transactable? [x]
+  (satisfies? ITransact x))
+
 (defn transact!
   "Given a tag, a cursor, an optional list of keys ks, mutate the tree
-   at the path specified by the cursor + the optional keys by applying
-   f to the specified value in the tree. An Om re-render will be
-   triggered."
+  at the path specified by the cursor + the optional keys by applying
+  f to the specified value in the tree. An Om re-render will be
+  triggered."
   ([cursor f]
-    (transact! cursor [] f nil))
+   (transact! cursor [] f nil))
   ([cursor korks f]
-    (transact! cursor korks f nil))
+   (transact! cursor korks f nil))
   ([cursor korks f tag]
-    (let [korks (cond
-                  (nil? korks) []
-                  (sequential? korks) korks
-                  :else [korks])]
-      (-transact! cursor korks f tag))))
+   {:pre [(transactable? cursor) (ifn? f)]}
+   (let [korks (cond
+                 (nil? korks) []
+                 (sequential? korks) korks
+                 :else [korks])]
+     (-transact! cursor korks f tag))))
 
 (defn update!
   "Like transact! but no function provided, instead a replacement
   value is given."
   ([cursor v]
-    (transact! cursor [] (fn [_] v) nil))
+   {:pre [(cursor? cursor)]}
+   (transact! cursor [] (fn [_] v) nil))
   ([cursor korks v]
-    (transact! cursor korks (fn [_] v) nil))
+   {:pre [(cursor? cursor)]}
+   (transact! cursor korks (fn [_] v) nil))
   ([cursor korks v tag]
-    (transact! cursor korks (fn [_] v) tag)))
+   {:pre [(cursor? cursor)]}
+   (transact! cursor korks (fn [_] v) tag)))
 
 (defn commit!
   "EXPERIMENTAL: Like transact! but does not schedule a re-render or
   create a transact event."
   [cursor korks f]
-  (when-not (cursor? cursor)
-    (throw
-      (js/Error. "First argument to commit! must be a cursor")))
+  {:pre [(cursor? cursor) (ifn? f)]}
   (let [key       (when (satisfies? IRootKey cursor)
                     (-root-key cursor))
         app-state (state cursor)
@@ -1188,10 +1250,11 @@
   "A helper function to get at React refs. Given a owning pure node
   extract the ref specified by name."
   ([owner]
-     (.getDOMNode owner))
+   (.getDOMNode owner))
   ([owner name]
-     (when-let [refs (.-refs owner)]
-       (.getDOMNode (aget refs name)))))
+   {:pre [(string? name)]}
+   (when-let [refs (.-refs owner)]
+     (.getDOMNode (aget refs name)))))
 
 (defn mounted?
   "Return true if the backing React component is mounted into the DOM."
@@ -1203,38 +1266,47 @@
    sets the state of the component. Conceptually analagous to React
    setState. Will schedule an Om re-render."
   ([owner v]
-     (-set-state! owner v true))
+   {:pre [(component? owner)]}
+   (-set-state! owner v true))
   ([owner korks v]
-     (let [ks (if (sequential? korks) korks [korks])]
-       (-set-state! owner ks v true))))
+   {:pre [(component? owner)]}
+   (let [ks (if (sequential? korks) korks [korks])]
+     (-set-state! owner ks v true))))
 
 (defn set-state-nr!
   "EXPERIMENTAL: Same as set-state! but does not trigger re-render."
   ([owner v]
-     (-set-state! owner v false))
+   {:pre [(component? owner)]}
+   (-set-state! owner v false))
   ([owner korks v]
-     (let [ks (if (sequential? korks) korks [korks])]
-       (-set-state! owner ks v false))))
+   {:pre [(component? owner)]}
+   (let [ks (if (sequential? korks) korks [korks])]
+     (-set-state! owner ks v false))))
 
 (defn update-state!
   "Takes a pure owning component, a sequential list of keys and a
    function to transition the state of the component. Conceptually
    analagous to React setState. Will schedule an Om re-render."
   ([owner f]
-     (set-state! owner (f (get-state owner))))
+   {:pre [(component? owner) (ifn? f)]}
+   (set-state! owner (f (get-state owner))))
   ([owner korks f]
-     (set-state! owner korks (f (get-state owner korks)))))
+   {:pre [(component? owner) (ifn? f)]}
+   (set-state! owner korks (f (get-state owner korks)))))
 
 (defn update-state-nr!
   "EXPERIMENTAL: Same as update-state! but does not trigger re-render."
   ([owner f]
-     (set-state-nr! owner (f (get-state owner))))
+   {:pre [(component? owner) (ifn? f)]}
+   (set-state-nr! owner (f (get-state owner))))
   ([owner korks f]
-     (set-state-nr! owner korks (f (get-state owner korks)))))
+   {:pre [(component? owner) (ifn? f)]}
+   (set-state-nr! owner korks (f (get-state owner korks)))))
 
 (defn refresh!
   "Utility to re-render an owner."
   [owner]
+  {:pre [(component? owner)]}
   (update-state! owner identity))
 
 (defn get-render-state
@@ -1243,8 +1315,10 @@
    it exists. Always returns the rendered state, not the pending
    state."
   ([owner]
-     (-get-render-state owner))
+   {:pre [(component? owner)]}
+   (-get-render-state owner))
   ([owner korks]
-     (let [ks (if (sequential? korks) korks [korks])]
-       (-get-render-state owner ks))))
+   {:pre [(component? owner)]}
+   (let [ks (if (sequential? korks) korks [korks])]
+     (-get-render-state owner ks))))
 

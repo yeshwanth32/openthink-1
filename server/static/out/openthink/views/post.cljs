@@ -1,6 +1,7 @@
 (ns openthink.views.post
   (:require [om.core :as om]
             [sablono.core :as html :refer-macros [html]]
+            [markdown.core :refer [md->html]]
             [openthink.utils :as util]
             [openthink.cursors :as curs]
             [openthink.views.activity :refer [actions-view]]))
@@ -13,7 +14,8 @@
         (html [:div {:className "post row"}
                [:h4 [:strong (:title post)]]
                [:hr]
-               [:div (util/render-text (:body post))]])))))
+               [:p {:dangerouslySetInnerHTML
+                   #js {:__html (md->html (:body post))}}]])))))
 
 (defn post-section [data owner]
   (reify

@@ -7,6 +7,7 @@
             [ajax.core :refer [GET POST]]
             [sablono.core :as html :refer-macros [html]]
             [openthink.views.auth :as auth]
+            [openthink.views.editor :as editor]
             [openthink.state :refer [app-state]]
             [openthink.utils :as util]
             [openthink.cursors :as curs]))
@@ -63,9 +64,10 @@
                [:input {:type "text" :placeholder "optional title" :name "post-title"
                         :value (om/get-state owner :title)
                         :onChange #(util/handle-change % owner :title)}]
-               [:textarea {:placeholder "text" :name "post-text"
-                           :value (om/get-state owner :text)
-                           :onChange #(util/handle-change % owner :text)}]
+               (om/build editor/editor-view data
+                         {:init-state
+                          {:placeholder "your content goes here"
+                           :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "create"]]]]))))
 
 (defn link-form [data owner {:keys [close-chan] :as opts}]
