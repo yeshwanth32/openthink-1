@@ -9,7 +9,8 @@
                  [sablono "0.2.22"]
                  [prismatic/dommy "0.1.3"]
                  [cljs-ajax "0.3.3"]
-                 [com.cognitect/transit-cljs "0.8.188"]]
+                 [com.cognitect/transit-cljs "0.8.188"]
+                 [markdown-clj "0.9.62"]]
 
   :plugins [[lein-cljsbuild "1.0.4"]]
 
