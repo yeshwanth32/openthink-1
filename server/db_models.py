@@ -158,7 +158,7 @@ def make_url(title, body=''):
             print "reached 1000 loops for post with title, body: %s" % (title, body)
             raise
         i += 1
-        url = url + "." + str(i)
+        url = url.split(".")[0] + "." + str(i)
     return url
 
 class Post(Model):
