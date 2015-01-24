@@ -20,7 +20,7 @@ cd ../..
 git add server/static
 git add server/style/js
 git commit -m "update static"
-git push origin release
+git push origin release -f
 
 cd devops/
 ansible-playbook ansible/deploy.yml -i ansible/prod
