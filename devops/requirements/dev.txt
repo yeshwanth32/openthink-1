@@ -10,12 +10,15 @@ uwsgi==2.0.9
 
 # Application
 # transit-python  #todo: figure out way to describe transit-python package here
+python-slugify==0.1.0
 
 # Database
 Flask-SQLAlchemy==2.0
 SQLAlchemy==0.9.7
 pytz
 psycopg2
+alembic==0.6.7
+Flask-Migrate==1.2.0
 
 # Migrations
 Flask-Migrate==1.2.0

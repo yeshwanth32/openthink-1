@@ -51,7 +51,7 @@
                    [:h4 (or (:votecount rel) 0)]]]]
 
                 [:div {:className "large-10 columns"}
-                 [:a {:href (str "/post/" (:id link-post))}
+                 [:a {:href (str "/post/" (:url link-post))}
                   [:strong {:className "child-title"} (:title link-post)]]
                  [:div (str (subs (str/replace (:body link-post) #"\\n|\n" " ") 0 80)
                             (if (> (count (:body link-post)) 80) "..." ""))]

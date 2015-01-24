@@ -4,6 +4,8 @@ from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, jsonify
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.login import LoginManager
+from flask.ext.script import Manager
+from flask.ext.migrate import Migrate, MigrateCommand
 from localsettings import SETTINGS
 
 # configuration
@@ -18,7 +20,9 @@ app.config.from_object(__name__)
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-
+migrate = Migrate(app, db)
+manager = Manager(app)
+manager.add_command('db', MigrateCommand)
 
 if __name__ == '__main__':
     app.run()

@@ -9,6 +9,7 @@ from sqlalchemy.sql import func
 # from sqlalchemy import and_
 import re
 from app import db, login_manager
+from slugify import slugify
 
 bcrypt = Bcrypt()
 
@@ -147,6 +148,19 @@ class User(Model, UserMixin):
         return '<User({username!r})>'.format(username=self.username)
 
 
+def make_url(title, body=''):
+    url = slugify(title or body[:140])
+    i = 1
+    while True:
+        if Post.query.filter(Post.url==url).count() == 0:
+            break
+        if i > 1000:
+            print "reached 1000 loops for post with title, body: %s" % (title, body)
+            raise
+        i += 1
+        url = url + "." + str(i)
+    return url
+
 class Post(Model):
     __tablename__ = 'posts'
     title = db.Column(db.String(140))
@@ -154,6 +168,7 @@ class Post(Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User', backref=db.backref('posts', lazy='dynamic'))
     time_posted = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
+    url = db.Column(db.String(160), unique=True)
 
     def get_child_relations(self, limit=8, ids_only=False):
         if not ids_only:
@@ -182,6 +197,7 @@ class Post(Model):
             time_posted = dt.datetime.utcnow()
         self.time_posted = time_posted
         self.set_attr_or_id("user", user=user, user_id=user_id)
+        self.url = make_url(title, body)
 
     @classmethod
     def get_root_post(cls):
@@ -201,7 +217,7 @@ class Post(Model):
 
     @property
     def writeable(self):
-        attrs = ("id", "title", "body", "user_id", "time_posted")
+        attrs = ("id", "title", "body", "user_id", "time_posted", "url")
         ret_dict = {k: self.__dict__.get(k, None) for k in attrs}
         ret_dict["time_posted"] = pytz.utc.localize(ret_dict["time_posted"])
         return ret_dict
