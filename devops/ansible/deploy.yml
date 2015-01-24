@@ -60,7 +60,7 @@
       file: src=/etc/nginx/sites-available/{{ project_name }}.conf dest=/etc/nginx/sites-enabled/{{ project_name }}.conf state=link
 
     - name: run db upgrades
-      shell: "{{ virtual_env }}/bin/python {{ project_folder }}/server/manage.py db upgrade"
+      shell: "{{ virtual_env }}/bin/python {{ project_folder }}/server/manage.py db upgrade --directory {{ project_folder }}/server/migrations/"
 
     - name: start app
       supervisorctl: name={{ project_name }} state=started
