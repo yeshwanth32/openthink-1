@@ -8,6 +8,7 @@ from transit.reader import Reader
 from StringIO import StringIO
 import math
 from flask.ext.login import login_user, logout_user, login_required, current_user
+from sqlalchemy.orm.exc import NoResultFound
 
 blueprint = Blueprint('views', __name__)
 
@@ -103,8 +104,8 @@ def links_endpoint(post_id):
         "new_rel_ids": [r.id for r in rels]
     })
 
-@blueprint.route('/post/<int:post_id>')
-def post_page(post_id):
+@blueprint.route('/post-by-id/<int:post_id>')
+def render_post(post_id):
     from localsettings import SETTINGS
     print "post is %s" % post_id
     req_data = get_post_data_from_req(request)
@@ -120,7 +121,16 @@ def post_page(post_id):
 @blueprint.route('/')
 def index():
     app_state = {"user": writable_current_user()}
-    return post_page(Post.root_post_id())
+    return render_post(Post.root_post_id())
+
+@blueprint.route('/post/<post_url>')
+def post_page(post_url):
+    try:
+        p_id = Post.query.filter(Post.url==post_url) \
+                         .with_entities(Post.id).one()[0]
+    except NoResultFound:
+        abort(404)
+    return render_post(p_id)
 
 def get_post_data_from_req(request):
     if not request.data:
@@ -184,8 +194,14 @@ def get_post_id_from_text(s):
     if is_number(s):
         return int(s)
     rt = route_from(s, method="GET")
-    if rt[0] == 'views.post_page':
+    if rt[0] == 'views.render_post':
         return rt[1]['post_id']
+    elif rt[0] == 'views.post_page':
+        try:
+            return Post.query.filter(Post.url==rt[1]['post_url']) \
+                             .with_entities(Post.id).one()[0]
+        except NoResultFound:
+            return None
     elif rt[0] == 'views.index':
         return Post.root_post_id()
 

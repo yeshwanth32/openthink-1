@@ -36,7 +36,7 @@
               (get-in rel [:linked_by :username])]
              " linked post "
              (let [post (curs/post-from-rel rel)]
-               [:a {:href (str "/post/" (:id post))} (:title post)])
+               [:a {:href (str "/post/" (:url post))} (:title post)])
              [:span {:className "link-action-datebit"}
               (str " at " (util/date (:time_linked rel)))]]))))
 

@@ -10,6 +10,7 @@ uwsgi==2.0.9
 
 # Application
 # transit-python  #todo: figure out way to describe transit-python package here
+python-slugify==0.1.0
 
 # Database
 Flask-SQLAlchemy==2.0
