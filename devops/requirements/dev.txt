@@ -17,8 +17,6 @@ Flask-SQLAlchemy==2.0
 SQLAlchemy==0.9.7
 pytz
 psycopg2
-alembic==0.6.7
-Flask-Migrate==1.2.0
 
 # Migrations
 Flask-Migrate==1.2.0
