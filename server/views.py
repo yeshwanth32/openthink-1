@@ -111,12 +111,15 @@ def render_post(post_id):
     req_data = get_post_data_from_req(request)
     page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
                                           float(ACTIONS_PER_PAGE)))
+    data_only = request.args.get('data-only')
     print "page is %s" % page
     app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
     print app_state
-    return render_template('base.html', debug=SETTINGS["DEBUG"],
-                            app_state=transitify(app_state))
+    if not data_only: 
+        return render_template('base.html', debug=SETTINGS["DEBUG"],
+                                app_state=transitify(app_state))
+    return transitify(app_state)
 
 @blueprint.route('/')
 def index():
