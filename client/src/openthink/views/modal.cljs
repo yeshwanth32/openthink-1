@@ -24,7 +24,7 @@
       {:submit-chan (chan) :title "" :text "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
-      (let [submit-chan (om/get-state owner :submit-chan)]
+      (let [submit-chan (util/debounce (om/get-state owner :submit-chan) 600)]
         (go (while true
               (<! submit-chan)
               (println "submitting post")
@@ -77,7 +77,7 @@
       {:submit-chan (chan) :link "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
-      (let [submit-chan (om/get-state owner :submit-chan)]
+      (let [submit-chan (util/debounce (om/get-state owner :submit-chan) 600)]
         (go (while true
               (<! submit-chan)
               (println "linking post")

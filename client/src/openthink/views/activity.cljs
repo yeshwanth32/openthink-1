@@ -1,6 +1,6 @@
 (ns openthink.views.activity
   (:require-macros [cljs.core.async.macros :refer [go go-loop alt!]])
-  (:require [cljs.core.async :refer [<! >! put! take! chan dropping-buffer]]
+  (:require [cljs.core.async :refer [<! >! put! take! chan]]
             [ajax.core :refer [GET POST]]
             [om.core :as om]
             [sablono.core :as html :refer-macros [html]]
@@ -40,7 +40,6 @@
              [:span {:className "link-action-datebit"}
               (str " at " (util/date (:time_linked rel)))]]))))
 
-
 (defn comment-form [data owner]
   (reify
     om/IInitState
@@ -48,7 +47,7 @@
       {:comment-chan (chan) :text ""})
     om/IWillMount
     (will-mount [_]
-      (let [comment-chan (om/get-state owner :comment-chan)]
+      (let [comment-chan (util/debounce (om/get-state owner :comment-chan) 600)]
         (go (while true
               (<! comment-chan)
               (println "making comment")
