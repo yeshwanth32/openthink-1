@@ -1,6 +1,6 @@
 (ns openthink.views.activity
   (:require-macros [cljs.core.async.macros :refer [go go-loop alt!]])
-  (:require [cljs.core.async :refer [<! >! put! take! chan]]
+  (:require [cljs.core.async :refer [<! >! put! take! chan dropping-buffer]]
             [ajax.core :refer [GET POST]]
             [om.core :as om]
             [sablono.core :as html :refer-macros [html]]
@@ -60,7 +60,11 @@
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
                                   (when-not (contains? resp :error)
-                                    (om/transact! data #(merge % resp)))))})))))
+                                    (om/transact! data [:comments]
+                                                  #(assoc % (get-in resp [:new_comment :id])
+                                                     (:new_comment resp)))
+                                    (om/transact! data [:actions]
+                                                  #(conj % (:new_action resp))))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]

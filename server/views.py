@@ -235,7 +235,10 @@ def submit_comment(post_id):
     if isinstance(comment, basestring):
         return transitify({"error": comment})
     post = Post.query.filter(Post.id==post_id).one()
-    return transitify({"comments": [c.writeable for c in post.get_comments()]})
+    return transitify({
+        "new_comment": comment.writeable,
+        "new_action": [comment.id, "Comment"]
+    })
 
 @blueprint.route("/vote", methods=["POST"])
 def submit_vote():
