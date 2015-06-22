@@ -7,7 +7,8 @@
             [markdown.core :refer [md->html]]
             [openthink.cursors :as curs]
             [openthink.utils :as util]
-            [openthink.views.editor :as editor]))
+            [openthink.views.editor :as editor]
+            [openthink.state :refer [update-app-state!]]))
 
 (def ACTIONS-PER-PAGE 20)
 
@@ -59,11 +60,7 @@
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
                                   (when-not (contains? resp :error)
-                                    (om/transact! data [:comments]
-                                                  #(assoc % (get-in resp [:new_comment :id])
-                                                     (:new_comment resp)))
-                                    (om/transact! data [:actions]
-                                                  #(conj % (:new_action resp))))))})))))
+                                    (update-app-state! resp))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]
@@ -105,13 +102,7 @@
                                   (println resp)
                                   (let [resp (clojure.walk/keywordize-keys resp)]
                                     (when-not (contains? resp :error)
-                                      (def r resp)
-                                      (om/transact! data :rels #(merge % (:rels resp)))
-                                      (om/transact! data :posts #(merge % (:posts resp)))
-                                      (om/transact! data :comments #(merge % (:comments resp)))
-                                      (om/update! data :page (:page resp))
-                                      (om/update! data :action_count (:action_count resp))
-                                      (om/update! data :actions (:actions resp)))))}))))))
+                                      (update-app-state! resp))))}))))))
     om/IRender
     (render [_]
             (println "actions view")

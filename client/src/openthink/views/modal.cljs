@@ -34,7 +34,7 @@
                     {:response-format :transit
                      :params (let [params {"title" (om/get-state owner :title)
                                            "text" (om/get-state owner :text)}
-                                   params (ask-for ["children"] params)]
+                                   params (ask-for ["children" "actions"] params)]
                                (if (:reply-to data)
                                  (assoc params "parent" (:reply-to data))
                                  params))
@@ -85,7 +85,7 @@
               (om/set-state! owner :error nil)
               (POST "/link-post"
                     {:response-format :transit
-                     :params (ask-for ["children"]
+                     :params (ask-for ["children" "actions"]
                                       {"child-text" (om/get-state owner :link)
                                        "parent" (:id (curs/current-post))})
                      :handler (fn [resp]
