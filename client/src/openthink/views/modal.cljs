@@ -13,7 +13,7 @@
             [openthink.cursors :as curs]))
 
 (defn ask-for [list-of-wants params]
-  (assoc params "ask_for" list-of-wants "current_post" (:current_post @app-state)))
+  (assoc params "ask_for" list-of-wants "current_post" (:id (curs/current-post))))
 
 ;; modal components and logic
 
@@ -87,7 +87,7 @@
                     {:response-format :transit
                      :params (ask-for ["children"]
                                       {"child-text" (om/get-state owner :link)
-                                       "parent" (:current_post data)})
+                                       "parent" (:id (curs/current-post))})
                      :handler (fn [resp]
                                 (println "link-form returned")
                                 (println resp)

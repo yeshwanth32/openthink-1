@@ -51,7 +51,7 @@
         (go (while true
               (<! comment-chan)
               (println "making comment")
-              (POST (str "/post/" (:current_post data) "/comment")
+              (POST (str "/post/" (:id (curs/current-post)) "/comment")
                     {:response-format :transit
                      :params {"body" (om/get-state owner :text)}
                      :handler (fn [resp]
@@ -97,7 +97,7 @@
         (go (while true
               (let [page (<! page-chan)]
                 (println "switching to page " page )
-                (GET (str "/actions/" (:current_post data))
+                (GET (str "/actions/" (:id (curs/current-post)))
                       {:response-format :transit
                        :params {"page" page}
                        :handler (fn [resp]
