@@ -65,7 +65,8 @@
                         :value (om/get-state owner :title)
                         :onChange #(util/handle-change % owner :title)}]
                (om/build editor/editor-view data
-                         {:init-state
+                         {:state {:text (om/get-state owner :text)}
+                          :init-state
                           {:placeholder "your content goes here"
                            :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "create"]]]]))))

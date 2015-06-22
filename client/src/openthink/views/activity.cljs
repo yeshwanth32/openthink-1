@@ -60,7 +60,8 @@
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
                                   (when-not (contains? resp :error)
-                                    (update-app-state! resp))))})))))
+                                    (update-app-state! resp)
+                                    (om/set-state! owner :text ""))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]
@@ -71,7 +72,8 @@
               [:div {:className "large-11 columns"}
                ;[:label "Submit a comment:"]
                (om/build editor/editor-view data
-                         {:init-state
+                         {:state {:text (om/get-state owner :text)}
+                          :init-state
                           {:placeholder "Post a comment"
                            :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
