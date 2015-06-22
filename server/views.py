@@ -194,9 +194,6 @@ def submit_post():
                                               float(ACTIONS_PER_PAGE)))
         app_state.update(handle_asks(req_data.get('current_post'), 
                                     req_data.get('ask_for'), page))
-    import pprint
-    pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(app_state)
     return transitify(app_state)
 
 def get_post_id_from_text(s):
