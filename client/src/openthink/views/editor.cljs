@@ -19,7 +19,7 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:btn-chan (chan) :text "" :placeholder "" :selected #{:bold :italic}})
+      {:btn-chan (chan) :placeholder "" :selected #{:bold :italic}})
     om/IWillMount
     (will-mount [_]
       (let [btn-chan (om/get-state owner :btn-chan)]
@@ -52,8 +52,7 @@
           (if-not (selected :preview)
             [:textarea {:placeholder (om/get-state owner :placeholder)
                         :value text
-                        :onChange #(do (util/handle-change % owner :text)
-                                     ((om/get-state owner :on-change-fn) %))}]
+                        :onChange (om/get-state owner :on-change-fn)}]
             [:div {:className "editor-preview"}
              [:div [:strong "Preview:"]]
              [:p {:dangerouslySetInnerHTML #js {:__html (md->html text)}}]])])))))

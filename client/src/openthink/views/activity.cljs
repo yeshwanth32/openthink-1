@@ -7,7 +7,8 @@
             [markdown.core :refer [md->html]]
             [openthink.cursors :as curs]
             [openthink.utils :as util]
-            [openthink.views.editor :as editor]))
+            [openthink.views.editor :as editor]
+            [openthink.state :refer [update-app-state!]]))
 
 (def ACTIONS-PER-PAGE 20)
 
@@ -40,7 +41,6 @@
              [:span {:className "link-action-datebit"}
               (str " at " (util/date (:time_linked rel)))]]))))
 
-
 (defn comment-form [data owner]
   (reify
     om/IInitState
@@ -48,11 +48,11 @@
       {:comment-chan (chan) :text ""})
     om/IWillMount
     (will-mount [_]
-      (let [comment-chan (om/get-state owner :comment-chan)]
+      (let [comment-chan (util/debounce (om/get-state owner :comment-chan) 600)]
         (go (while true
               (<! comment-chan)
               (println "making comment")
-              (POST (str "/post/" (:current_post data) "/comment")
+              (POST (str "/post/" (:id (curs/current-post)) "/comment")
                     {:response-format :transit
                      :params {"body" (om/get-state owner :text)}
                      :handler (fn [resp]
@@ -60,7 +60,8 @@
                                 (println resp)
                                 (let [resp (clojure.walk/keywordize-keys resp)]
                                   (when-not (contains? resp :error)
-                                    (om/transact! data #(merge % resp)))))})))))
+                                    (update-app-state! resp)
+                                    (om/set-state! owner :text ""))))})))))
     om/IRender
     (render [this]
       (html [:form {:onSubmit (fn [e]
@@ -71,7 +72,8 @@
               [:div {:className "large-11 columns"}
                ;[:label "Submit a comment:"]
                (om/build editor/editor-view data
-                         {:init-state
+                         {:state {:text (om/get-state owner :text)}
+                          :init-state
                           {:placeholder "Post a comment"
                            :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "comment"]]]]))))
@@ -94,7 +96,7 @@
         (go (while true
               (let [page (<! page-chan)]
                 (println "switching to page " page )
-                (GET (str "/actions/" (:current_post data))
+                (GET (str "/actions/" (:id (curs/current-post)))
                       {:response-format :transit
                        :params {"page" page}
                        :handler (fn [resp]
@@ -102,13 +104,7 @@
                                   (println resp)
                                   (let [resp (clojure.walk/keywordize-keys resp)]
                                     (when-not (contains? resp :error)
-                                      (def r resp)
-                                      (om/transact! data :rels #(merge % (:rels resp)))
-                                      (om/transact! data :posts #(merge % (:posts resp)))
-                                      (om/transact! data :comments #(merge % (:comments resp)))
-                                      (om/update! data :page (:page resp))
-                                      (om/update! data :action_count (:action_count resp))
-                                      (om/update! data :actions (:actions resp)))))}))))))
+                                      (update-app-state! resp))))}))))))
     om/IRender
     (render [_]
             (println "actions view")

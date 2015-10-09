@@ -1,18 +1,30 @@
 (ns openthink.core
-  (:require-macros [dommy.macros :refer [sel1]])
-  (:require [om.core :as om]
+  (:require-macros [dommy.macros :refer [sel1]]
+                   [cljs.core.async.macros :refer [go go-loop alt!]])
+  (:require [cljs.core.async :refer [<! >! put! take! chan]]
+            [om.core :as om]
+            [bidi.bidi :as bidi :refer [match-route]]
             [sablono.core :as html :refer-macros [html]]
             [openthink.state :refer [app-state]]
+            [openthink.routes :refer [routes dispatch!]]
             [openthink.views.modal :as modal]
             [openthink.views.header :refer [header]]
             [openthink.views.post :refer [post-section]]
-            [openthink.views.links :refer [links-section]]))
+            [openthink.views.links :refer [links-section]]
+            [pushy.core :as pushy]
+            [devtools.core :as devtools]))
 
 (enable-console-print!)
+(devtools/install!)
 
 (println "Hello world!")
 
 (println app-state)
+
+(def history
+  (pushy/pushy dispatch! (partial bidi/match-route routes)))
+
+(pushy/start! history)
 
 (defn body [data owner]
   (reify

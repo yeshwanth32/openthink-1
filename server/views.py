@@ -47,7 +47,7 @@ def actions_with_data(post_id, page):
         "page": int(page)
     }
 
-def handle_asks(post, list_of_wants, page):
+def handle_asks(post, list_of_wants, page=None):
     post = Post.query.filter(Post.id==post).one() if isinstance(post, int) else post
     ret = {"current_post": post.id, "rels": {}, "posts": {}}
     if "children" in list_of_wants:
@@ -63,11 +63,14 @@ def handle_asks(post, list_of_wants, page):
         ret["rels"].update(dict_by_id(rels))
 
     if "actions" in list_of_wants:
+        action_count = total_actions(post.id)
+        if page is None: # set page to the last page if not given
+            page = math.ceil(float(action_count) / float(ACTIONS_PER_PAGE))
         action_info = actions_with_data(post.id, page)
         ret["actions"] = action_info["actions"]
         ret["rels"].update(dict_by_id(action_info["rels"]))
         ret["posts"].update(dict_by_id(action_info["posts"]))
-        ret["action_count"] = total_actions(post.id)
+        ret["action_count"] = action_count
         ret["page"] = int(page)
         ret["comments"] = dict_by_id(action_info["comments"])
 
@@ -111,12 +114,15 @@ def render_post(post_id):
     req_data = get_post_data_from_req(request)
     page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
                                           float(ACTIONS_PER_PAGE)))
+    data_only = request.args.get('data-only')
     print "page is %s" % page
     app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
     print app_state
-    return render_template('base.html', debug=SETTINGS["DEBUG"],
-                            app_state=transitify(app_state))
+    if not data_only: 
+        return render_template('base.html', debug=SETTINGS["DEBUG"],
+                                app_state=transitify(app_state))
+    return transitify(app_state)
 
 @blueprint.route('/')
 def index():
@@ -231,8 +237,9 @@ def submit_comment(post_id):
     comment = Comment.submit_comment(current_user, post_id, req_data.get('body'))
     if isinstance(comment, basestring):
         return transitify({"error": comment})
-    post = Post.query.filter(Post.id==post_id).one()
-    return transitify({"comments": [c.writeable for c in post.get_comments()]})
+    app_state = {"success": "commented successfully"}
+    app_state.update(handle_asks(post_id, ["actions"]))
+    return transitify(app_state)
 
 @blueprint.route("/vote", methods=["POST"])
 def submit_vote():
