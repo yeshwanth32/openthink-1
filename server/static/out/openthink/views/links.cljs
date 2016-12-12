@@ -51,8 +51,9 @@
                    [:h4 (or (:votecount rel) 0)]]]]
 
                 [:div {:className "large-10 columns"}
-                 [:a {:href (str "/post/" (:url link-post))}
-                  [:strong {:className "child-title"} (:title link-post)]]
+                 [:strong {:className "child-title"}
+                  [:a {:href (str "/post/" (:url link-post))}
+                   (:title link-post)]]
                  [:div (str (subs (str/replace (:body link-post) #"\\n|\n" " ") 0 80)
                             (if (> (count (:body link-post)) 80) "..." ""))]
                  [:span {:className "link-by"}
@@ -83,7 +84,7 @@
             (om/set-state! owner :state :sorting)
             (om/set-state! owner :page 0)
             (om/update! data :sort-value new-sort-val)
-            (GET (str "/links/" (:current_post data))
+            (GET (str "/links/" (:id (curs/current-post)))
                   {:response-format :transit
                    :params {"sort" new-sort-val}
                    :handler (fn [resp]
@@ -102,7 +103,7 @@
         (go-loop []
           (let [new-page (<! load-ch)]
             (om/set-state! owner :state :loading)
-            (GET (str "/links/" (:current_post data))
+            (GET (str "/links/" (:id (curs/current-post)))
                   {:response-format :transit
                    :params {"sort" (:sort-value @app-state) ;; data cursor is stale for some reason
                             "page" new-page}
@@ -125,7 +126,7 @@
             link-rels (util/select-values (:rels data) link-ids)]
         (html [:div {:className "children-view"}
                [:div {:className "row reply-action"}
-                [:button {:onClick #(do (om/update! data :reply-to (:current_post data))
+                [:button {:onClick #(do (om/update! data :reply-to (:id (curs/current-post)))
                                         (om/update! data :modal :new-post))
                           :className "button expand large reply-btn"}
                  "Link new Post"]]

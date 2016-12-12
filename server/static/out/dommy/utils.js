@@ -1,24 +1,27 @@
-// Compiled by ClojureScript 0.0-2511
+// Compiled by ClojureScript 1.9.293 {}
 goog.provide('dommy.utils');
 goog.require('cljs.core');
 /**
-* Dissociate this keyseq from m, removing any empty maps created as a result
-* (including at the top-level).
-*/
-dommy.utils.dissoc_in = (function dissoc_in(m,p__28454){
-var vec__28456 = p__28454;
-var k = cljs.core.nth.call(null,vec__28456,(0),null);
-var ks = cljs.core.nthnext.call(null,vec__28456,(1));
+ * Dissociate this keyseq from m, removing any empty maps created as a result
+ * (including at the top-level).
+ */
+dommy.utils.dissoc_in = (function dommy$utils$dissoc_in(m,p__42633){
+var vec__42637 = p__42633;
+var seq__42638 = cljs.core.seq.call(null,vec__42637);
+var first__42639 = cljs.core.first.call(null,seq__42638);
+var seq__42638__$1 = cljs.core.next.call(null,seq__42638);
+var k = first__42639;
+var ks = seq__42638__$1;
 if(cljs.core.truth_(m)){
-var temp__4124__auto__ = (function (){var and__3626__auto__ = ks;
-if(and__3626__auto__){
-return dissoc_in.call(null,m.call(null,k),ks);
+var temp__4655__auto__ = (function (){var and__6531__auto__ = ks;
+if(and__6531__auto__){
+return dommy.utils.dissoc_in.call(null,m.call(null,k),ks);
 } else {
-return and__3626__auto__;
+return and__6531__auto__;
 }
 })();
-if(cljs.core.truth_(temp__4124__auto__)){
-var res = temp__4124__auto__;
+if(cljs.core.truth_(temp__4655__auto__)){
+var res = temp__4655__auto__;
 return cljs.core.assoc.call(null,m,k,res);
 } else {
 var res = cljs.core.dissoc.call(null,m,k);
@@ -32,18 +35,21 @@ return res;
 return null;
 }
 });
-dommy.utils.__GT_Array = (function __GT_Array(array_like){
+dommy.utils.__GT_Array = (function dommy$utils$__GT_Array(array_like){
 return Array.prototype.slice.call(array_like);
 });
 /**
-* Coerces strings and keywords to strings, while preserving namespace of
-* namespaced keywords
-*/
-dommy.utils.as_str = (function as_str(s){
+ * Coerces strings and keywords to strings, while preserving namespace of
+ * namespaced keywords
+ */
+dommy.utils.as_str = (function dommy$utils$as_str(s){
 if((s instanceof cljs.core.Keyword)){
-return [cljs.core.str((function (){var G__28458 = cljs.core.namespace.call(null,s);
-var G__28458__$1 = (((G__28458 == null))?null:[cljs.core.str(G__28458),cljs.core.str("/")].join(''));
-return G__28458__$1;
+return [cljs.core.str((function (){var G__42641 = cljs.core.namespace.call(null,s);
+if((G__42641 == null)){
+return null;
+} else {
+return [cljs.core.str(G__42641),cljs.core.str("/")].join('');
+}
 })()),cljs.core.str(cljs.core.name.call(null,s))].join('');
 } else {
 return s;

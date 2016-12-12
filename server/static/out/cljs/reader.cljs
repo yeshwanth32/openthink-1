@@ -224,18 +224,22 @@ nil if the end of stream has been reached")
 
 (defn read-delimited-list
   [delim rdr recursive?]
-  (loop [a (transient [])]
+  (loop [a (array)]
     (let [ch (read-past whitespace? rdr)]
       (when-not ch (reader-error rdr "EOF while reading"))
       (if (identical? delim ch)
-        (persistent! a)
+        a
         (if-let [macrofn (macros ch)]
           (let [mret (macrofn rdr ch)]
-            (recur (if (identical? mret rdr) a (conj! a mret))))
+            (recur (if (identical? mret rdr) a (do
+                                                 (.push a mret)
+                                                 a))))
           (do
             (unread rdr ch)
             (let [o (read rdr true nil recursive?)]
-              (recur (if (identical? o rdr) a (conj! a o))))))))))
+              (recur (if (identical? o rdr) a (do
+                                                (.push a o)
+                                                a))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; data structure readers
@@ -259,24 +263,31 @@ nil if the end of stream has been reached")
 
 (defn read-unmatched-delimiter
   [rdr ch]
-  (reader-error rdr "Unmached delimiter " ch))
+  (reader-error rdr "Unmatched delimiter " ch))
 
 (defn read-list
   [rdr _]
-  (apply list (read-delimited-list ")" rdr true)))
+  (let [arr (read-delimited-list ")" rdr true)]
+    (loop [i (alength arr) ^not-native r ()]
+      (if (> i 0)
+        (recur (dec i) (-conj r (aget arr (dec i))))
+        r))))
 
 (def read-comment skip-line)
 
 (defn read-vector
   [rdr _]
-  (read-delimited-list "]" rdr true))
+  (vec (read-delimited-list "]" rdr true)))
 
 (defn read-map
   [rdr _]
-  (let [l (read-delimited-list "}" rdr true)]
-    (when (odd? (count l))
+  (let [l (read-delimited-list "}" rdr true)
+        c (alength l)]
+    (when (odd? c)
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (apply hash-map l)))
+    (if (<= c (* 2 (.-HASHMAP-THRESHOLD PersistentArrayMap)))
+      (.fromArray PersistentArrayMap l true true)
+      (.fromArray PersistentHashMap l true))))
 
 (defn read-number
   [reader initch]
@@ -334,6 +345,21 @@ nil if the end of stream has been reached")
                 (.-length token)))
       (special-symbols token (symbol token)))))
 
+(defn read-literal
+  [rdr ch]
+  (let [token (read-token rdr ch)
+        chars (subs token 1)]
+    (cond (identical? (.-length chars) 1) chars
+          (identical? chars "tab")       "\t"
+          (identical? chars "return")    "\r"
+          (identical? chars "newline")   "\n"
+          (identical? chars "space")     " "
+          (identical? chars "backspace") "\b"
+          (identical? chars "formfeed")  "\f"
+          (identical? (.charAt chars 0) "u") (make-unicode-char (subs chars 1))
+          (identical? (.charAt chars 0) "o") (not-implemented rdr token)
+          :else (reader-error rdr "Unknown character literal: " token))))
+
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
@@ -380,7 +406,7 @@ nil if the end of stream has been reached")
 
 (defn read-set
   [rdr _]
-  (set (read-delimited-list "}" rdr true)))
+  (.fromArray PersistentHashSet (read-delimited-list "}" rdr true) true))
 
 (defn read-regex
   [rdr ch]
@@ -407,7 +433,7 @@ nil if the end of stream has been reached")
    (identical? c \]) read-unmatched-delimiter
    (identical? c \{) read-map
    (identical? c \}) read-unmatched-delimiter
-   (identical? c \\) read-char
+   (identical? c \\) read-literal
    (identical? c \#) read-dispatch
    :else nil))
 
@@ -423,7 +449,9 @@ nil if the end of stream has been reached")
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
-   If EOF, throws if eof-is-error is true. Otherwise returns sentinel."
+   If EOF, throws if eof-is-error is true. Otherwise returns sentinel.
+
+   Only supports edn (similar to clojure.edn/read)"
   [reader eof-is-error sentinel is-recursive]
   (let [ch (read-char reader)]
     (cond
@@ -443,9 +471,10 @@ nil if the end of stream has been reached")
 (defn read-string
   "Reads one object from the string s"
   [s]
+  (when-not (string? s)
+    (throw (js/Error. "Cannot read from non-string object.")))
   (let [r (push-back-reader s)]
     (read r false nil false)))
-
 
 ;; read instances
 
@@ -561,7 +590,7 @@ nil if the end of stream has been reached")
 (defn ^:private read-uuid
   [uuid]
   (if (string? uuid)
-    (UUID. uuid)
+    (cljs.core/uuid uuid)
     (reader-error nil "UUID literal expects a string as its representation.")))
 
 (def ^:dynamic *tag-table*

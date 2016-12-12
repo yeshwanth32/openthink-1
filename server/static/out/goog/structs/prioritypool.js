@@ -28,11 +28,11 @@ goog.require('goog.structs.PriorityQueue');
 
 
 /**
- * A generic pool class. If max is greater than min, an error is thrown.
- * @param {number=} opt_minCount Min. number of objects (Default: 1).
+ * A generic pool class. If min is greater than max, an error is thrown.
+ * @param {number=} opt_minCount Min. number of objects (Default: 0).
  * @param {number=} opt_maxCount Max. number of objects (Default: 10).
  * @constructor
- * @extends {goog.structs.Pool.<VALUE>}
+ * @extends {goog.structs.Pool<VALUE>}
  * @template VALUE
  */
 goog.structs.PriorityPool = function(opt_minCount, opt_maxCount) {
@@ -44,7 +44,7 @@ goog.structs.PriorityPool = function(opt_minCount, opt_maxCount) {
 
   /**
    * Queue of requests for pool objects.
-   * @private {goog.structs.PriorityQueue.<VALUE>}
+   * @private {goog.structs.PriorityQueue<VALUE>}
    */
   this.requestQueue_ = new goog.structs.PriorityQueue();
 
@@ -96,19 +96,19 @@ goog.structs.PriorityPool.prototype.setDelay = function(delay) {
  *     available and a callback is not given. Otherwise, undefined.
  * @override
  */
-goog.structs.PriorityPool.prototype.getObject = function(opt_callback,
-                                                         opt_priority) {
+goog.structs.PriorityPool.prototype.getObject = function(
+    opt_callback, opt_priority) {
   if (!opt_callback) {
     var result = goog.structs.PriorityPool.base(this, 'getObject');
     if (result && this.delay) {
       this.delayTimeout_ = goog.global.setTimeout(
-          goog.bind(this.handleQueueRequests_, this),
-          this.delay);
+          goog.bind(this.handleQueueRequests_, this), this.delay);
     }
     return result;
   }
 
-  var priority = goog.isDef(opt_priority) ? opt_priority :
+  var priority = goog.isDef(opt_priority) ?
+      opt_priority :
       goog.structs.PriorityPool.DEFAULT_PRIORITY_;
   this.requestQueue_.enqueue(priority, opt_callback);
 

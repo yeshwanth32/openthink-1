@@ -13,7 +13,7 @@
             [openthink.cursors :as curs]))
 
 (defn ask-for [list-of-wants params]
-  (assoc params "ask_for" list-of-wants "current_post" (:current_post @app-state)))
+  (assoc params "ask_for" list-of-wants "current_post" (:id (curs/current-post))))
 
 ;; modal components and logic
 
@@ -24,7 +24,7 @@
       {:submit-chan (chan) :title "" :text "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
-      (let [submit-chan (om/get-state owner :submit-chan)]
+      (let [submit-chan (util/debounce (om/get-state owner :submit-chan) 600)]
         (go (while true
               (<! submit-chan)
               (println "submitting post")
@@ -34,7 +34,7 @@
                     {:response-format :transit
                      :params (let [params {"title" (om/get-state owner :title)
                                            "text" (om/get-state owner :text)}
-                                   params (ask-for ["children"] params)]
+                                   params (ask-for ["children" "actions"] params)]
                                (if (:reply-to data)
                                  (assoc params "parent" (:reply-to data))
                                  params))
@@ -65,7 +65,8 @@
                         :value (om/get-state owner :title)
                         :onChange #(util/handle-change % owner :title)}]
                (om/build editor/editor-view data
-                         {:init-state
+                         {:state {:text (om/get-state owner :text)}
+                          :init-state
                           {:placeholder "your content goes here"
                            :on-change-fn #(util/handle-change % owner :text)}})
                [:button {:type "submit" :className "button tiny"} "create"]]]]))))
@@ -77,7 +78,7 @@
       {:submit-chan (chan) :link "" :error nil :state :ready})
     om/IWillMount
     (will-mount [_]
-      (let [submit-chan (om/get-state owner :submit-chan)]
+      (let [submit-chan (util/debounce (om/get-state owner :submit-chan) 600)]
         (go (while true
               (<! submit-chan)
               (println "linking post")
@@ -85,9 +86,9 @@
               (om/set-state! owner :error nil)
               (POST "/link-post"
                     {:response-format :transit
-                     :params (ask-for ["children"]
+                     :params (ask-for ["children" "actions"]
                                       {"child-text" (om/get-state owner :link)
-                                       "parent" (:current_post data)})
+                                       "parent" (:id (curs/current-post))})
                      :handler (fn [resp]
                                 (println "link-form returned")
                                 (println resp)
