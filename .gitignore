@@ -6,6 +6,7 @@ extra/
 openthink-env/
 server/localsettings.py
 client/target/
+client/.idea
 stuff/
 devops/ansible/prod
 devops/ansible/group_vars/
