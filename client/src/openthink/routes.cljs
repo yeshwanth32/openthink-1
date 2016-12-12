@@ -8,7 +8,7 @@
 (def routes ["/" {"" :index
                   "post/" {[:title] :post}}])
 
-(defn get-post! []
+(defn get-post! [url]
   (GET url
        {:response-format :transit
         :params {"data-only" true}
