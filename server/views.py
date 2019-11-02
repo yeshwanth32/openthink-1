@@ -5,9 +5,11 @@ from db_queries import child_rel_query, post_actions, total_actions
 from utils import is_number, route_from
 from transit.writer import Writer
 from transit.reader import Reader
-from StringIO import StringIO
+from io import StringIO, BytesIO
+from localsettings import SETTINGS
+from six import string_types
 import math
-from flask.ext.login import login_user, logout_user, login_required, current_user
+from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.orm.exc import NoResultFound
 
 blueprint = Blueprint('views', __name__)
@@ -21,7 +23,7 @@ def transitify(val, format='json'):
     return io.getvalue()
 
 def writable_current_user():
-    if not current_user.is_anonymous():
+    if not current_user.is_anonymous:
         return current_user.writeable
     return None
 
@@ -81,7 +83,7 @@ def actions_endpoint(post_id):
     action_count = total_actions(post_id)
     page = request.args.get('page', math.ceil(float(action_count) / 
                                               float(ACTIONS_PER_PAGE)))
-    print "page is %s" % page
+    print("page is %s" % page)
     action_info = actions_with_data(post_id, page)
     return transitify({
         "actions": action_info["actions"], 
@@ -109,16 +111,15 @@ def links_endpoint(post_id):
 
 @blueprint.route('/post-by-id/<int:post_id>')
 def render_post(post_id):
-    from localsettings import SETTINGS
-    print "post is %s" % post_id
+    print ("post is %s" % post_id)
     req_data = get_post_data_from_req(request)
     page = req_data.get("page", math.ceil(float(total_actions(post_id)) / 
                                           float(ACTIONS_PER_PAGE)))
     data_only = request.args.get('data-only')
-    print "page is %s" % page
+    print ("page is %s" % page)
     app_state = handle_asks(post_id, ["children", "actions"], page=page)
     app_state["user"] = writable_current_user()
-    print app_state
+    print (app_state)
     if not data_only: 
         return render_template('base.html', debug=SETTINGS["DEBUG"],
                                 app_state=transitify(app_state))
@@ -142,7 +143,7 @@ def get_post_data_from_req(request):
     if not request.data:
         return {}
     reader = Reader()
-    return reader.read(StringIO(request.data))
+    return reader.read(BytesIO(request.data))
 
 @blueprint.route("/login", methods=["POST"])
 def login():
@@ -167,7 +168,7 @@ def register():
                               req_data.get("email"),
                               req_data.get("password"),
                               req_data.get("r-password"))
-    if isinstance(user, basestring):
+    if isinstance(user, str):
         return transitify({"error": user})
     login_user(user)
     return transitify({"username": user.username, "id": user.id})
@@ -178,14 +179,14 @@ def submit_post():
     post = Post.submit_post(current_user,
                      req_data.get("text"),
                      req_data.get("title"))
-    if isinstance(post, basestring):
+    if isinstance(post, str):
         return transitify({"error": post, "error_type": "create-post"})
 
     post_id = req_data.get('parent', Post.root_post_id())
     relation = Relation.link_posts(post_id, 
                                    post, 
                                    current_user)
-    if isinstance(relation, basestring):
+    if isinstance(relation, str):
         return transitify({"error": relation, "error_type": "link-posts"})
 
     app_state = {"success": "posted successfully"}
@@ -218,9 +219,9 @@ def link_post():
     relation = "Post not found"
     child_id = get_post_id_from_text(req_data.get('child-text'))
     if child_id:
-        print "linking post %s" % child_id
+        print("linking post %s" % child_id)
         relation = Relation.link_posts(parent_id, child_id, current_user)
-    if isinstance(relation, basestring):
+    if isinstance(relation, str):
         return transitify({"error": relation})
 
     app_state = {"success": "linked successfully"}
@@ -235,7 +236,7 @@ def link_post():
 def submit_comment(post_id):
     req_data = get_post_data_from_req(request)
     comment = Comment.submit_comment(current_user, post_id, req_data.get('body'))
-    if isinstance(comment, basestring):
+    if isinstance(comment, str):
         return transitify({"error": comment})
     app_state = {"success": "commented successfully"}
     app_state.update(handle_asks(post_id, ["actions"]))
@@ -245,7 +246,7 @@ def submit_comment(post_id):
 def submit_vote():
     req_data = get_post_data_from_req(request)
     vote = Vote.submit_vote(current_user, int(req_data.get('rel_id')), int(req_data.get('value')))
-    if isinstance(vote, basestring):
+    if isinstance(vote, str):
         return transitify({"error": vote})
     rel = Relation.query.filter(Relation.id==int(req_data.get('rel_id'))).one()
     return transitify({"rel": rel.writeable_with_vote_info()})

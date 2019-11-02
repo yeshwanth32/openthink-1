@@ -1,10 +1,12 @@
 import datetime as dt
 import pytz
+import string
+import random
 
 from localsettings import SETTINGS
 from flask import Flask
-from flask.ext.bcrypt import Bcrypt
-from flask.ext.login import UserMixin
+from flask_bcrypt import Bcrypt
+from flask_login import UserMixin
 from sqlalchemy.sql import func
 # from sqlalchemy import and_
 import re
@@ -12,19 +14,6 @@ from app import db, login_manager
 from slugify import slugify
 
 bcrypt = Bcrypt()
-
-def setup_db(drop_tables_first=False):
-    if drop_tables_first:
-        db.drop_all()
-    db.create_all()
-    # create admin user
-    admin_user = User.create(username=SETTINGS["admin_username"], 
-                             password=SETTINGS["admin_password"],
-                             email=SETTINGS["admin_email"])
-    # create root post
-    Post.create(title="Welcome to Openthink!",
-                body="Browse these posts or submit your own!",
-                user=admin_user)
 
 def doc_or_doc_id(docname, value, dict_to_update=None):
     dict_to_update = dict_to_update or {}
@@ -155,7 +144,7 @@ def make_url(title, body=''):
         if Post.query.filter(Post.url==url).count() == 0:
             break
         if i > 1000:
-            print "reached 1000 loops for post with title, body: %s" % (title, body)
+            print("reached 1000 loops for post with title, body: %s" % (title, body))
             raise
         i += 1
         url = url.split(".")[0] + "." + str(i)
@@ -168,11 +157,12 @@ class Post(Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User', backref=db.backref('posts', lazy='dynamic'))
     time_posted = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
+    time_edited = db.Column(db.DateTime, nullable= True, default= None)
     url = db.Column(db.String(160), unique=True)
 
     def get_child_relations(self, limit=8, ids_only=False):
         if not ids_only:
-            return Relation.query.filter(Relation.parent_id==self.id).limit(limit)
+            return Relation.query.filter(Relation.parent_id == self.id).limit(limit)
         return Relation.query.with_entities(Relation.id) \
                              .filter(Relation.parent_id==self.id).limit(limit)
 
@@ -215,6 +205,14 @@ class Post(Model):
             return "your title must be less than 140 characters long"
         return cls.create(title=title, body=text, user=user)
 
+    def edit_post(self, title, body):
+        if (title and len(title) > 140):
+            return "your title must be less than 140 characters long"
+        self.title = title
+        self.body = body
+        self.time_edited = dt.datetime.utcnow()
+
+
     @property
     def writeable(self):
         attrs = ("id", "title", "body", "user_id", "time_posted", "url")
@@ -224,6 +222,7 @@ class Post(Model):
 
     def __repr__(self):
         return '<Post %r>' % self.title
+
 
 
 class Relation(Model):
@@ -279,7 +278,7 @@ class Relation(Model):
 
     def writeable_with_vote_info(self, user=None):
         vote_value = 0
-        if user is None or user.is_anonymous():
+        if user is None:
             return dict(list(self.writeable.items()) + [("user_vote_value", vote_value)])
         user_id = user if isinstance(user, int) else user.id
         vote = Vote.query.filter((Vote.rel_id==self.id) & (Vote.user_id==user_id)).first()
@@ -365,3 +364,15 @@ class Vote(CRUDMixin, db.Model):
 def load_user(userid):
     return User.query.get(userid)
 
+def setup_db(drop_tables_first=False):
+    if drop_tables_first:
+        db.drop_all()
+    db.create_all()
+    # create admin user
+    admin_user = User.create(username=SETTINGS["admin_username"],
+                             password=SETTINGS["admin_password"],
+                             email=SETTINGS["admin_email"])
+    # create root post
+    Post.create(title="Welcome to Openthink!",
+                body="Browse these posts or submit your own!",
+                user=admin_user)
