@@ -22,9 +22,6 @@
         <script type='text/javascript'>
             var initial_app_state = {{ app_state|tojson }};
         </script>
-    {% if debug %}
-        <script type='text/javascript' id='lt_ws' src='http://localhost:56268/socket.io/lighttable/ws.js'></script>
-    {% endif %}
     </head>
     <body>
         <!--[if lt IE 7]>

@@ -12,7 +12,8 @@
             [openthink.views.post :refer [post-section]]
             [openthink.views.links :refer [links-section]]
             [pushy.core :as pushy]
-            [devtools.core :as devtools]))
+            [devtools.core :as devtools]
+            [goog.math :as math]))
 
 (enable-console-print!)
 (devtools/install!)
@@ -53,3 +54,4 @@
   (om/root app state {:target target}))
 
 (start (sel1 :#app) app-state app)
+(js/console.log "testing")

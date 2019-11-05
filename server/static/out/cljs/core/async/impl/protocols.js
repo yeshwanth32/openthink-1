@@ -1,222 +1,326 @@
-// Compiled by ClojureScript 0.0-2371
+// Compiled by ClojureScript 1.9.293 {}
 goog.provide('cljs.core.async.impl.protocols');
 goog.require('cljs.core');
 cljs.core.async.impl.protocols.MAX_QUEUE_SIZE = (1024);
-cljs.core.async.impl.protocols.ReadPort = (function (){var obj17097 = {};return obj17097;
-})();
-cljs.core.async.impl.protocols.take_BANG_ = (function take_BANG_(port,fn1_handler){if((function (){var and__3626__auto__ = port;if(and__3626__auto__)
-{return port.cljs$core$async$impl$protocols$ReadPort$take_BANG_$arity$2;
-} else
-{return and__3626__auto__;
-}
-})())
-{return port.cljs$core$async$impl$protocols$ReadPort$take_BANG_$arity$2(port,fn1_handler);
-} else
-{var x__4275__auto__ = (((port == null))?null:port);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.take_BANG_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.take_BANG_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"ReadPort.take!",port);
-}
-}
-})().call(null,port,fn1_handler);
-}
-});
-cljs.core.async.impl.protocols.WritePort = (function (){var obj17099 = {};return obj17099;
-})();
-cljs.core.async.impl.protocols.put_BANG_ = (function put_BANG_(port,val,fn1_handler){if((function (){var and__3626__auto__ = port;if(and__3626__auto__)
-{return port.cljs$core$async$impl$protocols$WritePort$put_BANG_$arity$3;
-} else
-{return and__3626__auto__;
-}
-})())
-{return port.cljs$core$async$impl$protocols$WritePort$put_BANG_$arity$3(port,val,fn1_handler);
-} else
-{var x__4275__auto__ = (((port == null))?null:port);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.put_BANG_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.put_BANG_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"WritePort.put!",port);
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.ReadPort = function(){};
+
+/**
+ * derefable val if taken, nil if take was enqueued
+ */
+cljs.core.async.impl.protocols.take_BANG_ = (function cljs$core$async$impl$protocols$take_BANG_(port,fn1_handler){
+if((!((port == null))) && (!((port.cljs$core$async$impl$protocols$ReadPort$take_BANG_$arity$2 == null)))){
+return port.cljs$core$async$impl$protocols$ReadPort$take_BANG_$arity$2(port,fn1_handler);
+} else {
+var x__7206__auto__ = (((port == null))?null:port);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.take_BANG_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,port,fn1_handler);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.take_BANG_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,port,fn1_handler);
+} else {
+throw cljs.core.missing_protocol.call(null,"ReadPort.take!",port);
 }
 }
-})().call(null,port,val,fn1_handler);
 }
 });
-cljs.core.async.impl.protocols.Channel = (function (){var obj17101 = {};return obj17101;
-})();
-cljs.core.async.impl.protocols.close_BANG_ = (function close_BANG_(chan){if((function (){var and__3626__auto__ = chan;if(and__3626__auto__)
-{return chan.cljs$core$async$impl$protocols$Channel$close_BANG_$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return chan.cljs$core$async$impl$protocols$Channel$close_BANG_$arity$1(chan);
-} else
-{var x__4275__auto__ = (((chan == null))?null:chan);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.close_BANG_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.close_BANG_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Channel.close!",chan);
-}
-}
-})().call(null,chan);
-}
-});
-cljs.core.async.impl.protocols.closed_QMARK_ = (function closed_QMARK_(chan){if((function (){var and__3626__auto__ = chan;if(and__3626__auto__)
-{return chan.cljs$core$async$impl$protocols$Channel$closed_QMARK_$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return chan.cljs$core$async$impl$protocols$Channel$closed_QMARK_$arity$1(chan);
-} else
-{var x__4275__auto__ = (((chan == null))?null:chan);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.closed_QMARK_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.closed_QMARK_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Channel.closed?",chan);
+
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.WritePort = function(){};
+
+/**
+ * derefable boolean (false if already closed) if handled, nil if put was enqueued.
+ *                             Must throw on nil val.
+ */
+cljs.core.async.impl.protocols.put_BANG_ = (function cljs$core$async$impl$protocols$put_BANG_(port,val,fn1_handler){
+if((!((port == null))) && (!((port.cljs$core$async$impl$protocols$WritePort$put_BANG_$arity$3 == null)))){
+return port.cljs$core$async$impl$protocols$WritePort$put_BANG_$arity$3(port,val,fn1_handler);
+} else {
+var x__7206__auto__ = (((port == null))?null:port);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.put_BANG_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,port,val,fn1_handler);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.put_BANG_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,port,val,fn1_handler);
+} else {
+throw cljs.core.missing_protocol.call(null,"WritePort.put!",port);
 }
 }
-})().call(null,chan);
 }
 });
-cljs.core.async.impl.protocols.Handler = (function (){var obj17103 = {};return obj17103;
-})();
-cljs.core.async.impl.protocols.active_QMARK_ = (function active_QMARK_(h){if((function (){var and__3626__auto__ = h;if(and__3626__auto__)
-{return h.cljs$core$async$impl$protocols$Handler$active_QMARK_$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return h.cljs$core$async$impl$protocols$Handler$active_QMARK_$arity$1(h);
-} else
-{var x__4275__auto__ = (((h == null))?null:h);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.active_QMARK_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.active_QMARK_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Handler.active?",h);
-}
-}
-})().call(null,h);
-}
-});
-cljs.core.async.impl.protocols.commit = (function commit(h){if((function (){var and__3626__auto__ = h;if(and__3626__auto__)
-{return h.cljs$core$async$impl$protocols$Handler$commit$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return h.cljs$core$async$impl$protocols$Handler$commit$arity$1(h);
-} else
-{var x__4275__auto__ = (((h == null))?null:h);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.commit[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.commit["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Handler.commit",h);
+
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.Channel = function(){};
+
+cljs.core.async.impl.protocols.close_BANG_ = (function cljs$core$async$impl$protocols$close_BANG_(chan){
+if((!((chan == null))) && (!((chan.cljs$core$async$impl$protocols$Channel$close_BANG_$arity$1 == null)))){
+return chan.cljs$core$async$impl$protocols$Channel$close_BANG_$arity$1(chan);
+} else {
+var x__7206__auto__ = (((chan == null))?null:chan);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.close_BANG_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,chan);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.close_BANG_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,chan);
+} else {
+throw cljs.core.missing_protocol.call(null,"Channel.close!",chan);
 }
 }
-})().call(null,h);
 }
 });
-cljs.core.async.impl.protocols.Buffer = (function (){var obj17105 = {};return obj17105;
-})();
-cljs.core.async.impl.protocols.full_QMARK_ = (function full_QMARK_(b){if((function (){var and__3626__auto__ = b;if(and__3626__auto__)
-{return b.cljs$core$async$impl$protocols$Buffer$full_QMARK_$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return b.cljs$core$async$impl$protocols$Buffer$full_QMARK_$arity$1(b);
-} else
-{var x__4275__auto__ = (((b == null))?null:b);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.full_QMARK_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.full_QMARK_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Buffer.full?",b);
+
+cljs.core.async.impl.protocols.closed_QMARK_ = (function cljs$core$async$impl$protocols$closed_QMARK_(chan){
+if((!((chan == null))) && (!((chan.cljs$core$async$impl$protocols$Channel$closed_QMARK_$arity$1 == null)))){
+return chan.cljs$core$async$impl$protocols$Channel$closed_QMARK_$arity$1(chan);
+} else {
+var x__7206__auto__ = (((chan == null))?null:chan);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.closed_QMARK_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,chan);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.closed_QMARK_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,chan);
+} else {
+throw cljs.core.missing_protocol.call(null,"Channel.closed?",chan);
 }
 }
-})().call(null,b);
 }
 });
-cljs.core.async.impl.protocols.remove_BANG_ = (function remove_BANG_(b){if((function (){var and__3626__auto__ = b;if(and__3626__auto__)
-{return b.cljs$core$async$impl$protocols$Buffer$remove_BANG_$arity$1;
-} else
-{return and__3626__auto__;
-}
-})())
-{return b.cljs$core$async$impl$protocols$Buffer$remove_BANG_$arity$1(b);
-} else
-{var x__4275__auto__ = (((b == null))?null:b);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.remove_BANG_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.remove_BANG_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Buffer.remove!",b);
-}
-}
-})().call(null,b);
-}
-});
-cljs.core.async.impl.protocols.add_BANG__STAR_ = (function add_BANG__STAR_(b,itm){if((function (){var and__3626__auto__ = b;if(and__3626__auto__)
-{return b.cljs$core$async$impl$protocols$Buffer$add_BANG__STAR_$arity$2;
-} else
-{return and__3626__auto__;
-}
-})())
-{return b.cljs$core$async$impl$protocols$Buffer$add_BANG__STAR_$arity$2(b,itm);
-} else
-{var x__4275__auto__ = (((b == null))?null:b);return (function (){var or__3638__auto__ = (cljs.core.async.impl.protocols.add_BANG__STAR_[goog.typeOf(x__4275__auto__)]);if(or__3638__auto__)
-{return or__3638__auto__;
-} else
-{var or__3638__auto____$1 = (cljs.core.async.impl.protocols.add_BANG__STAR_["_"]);if(or__3638__auto____$1)
-{return or__3638__auto____$1;
-} else
-{throw cljs.core.missing_protocol.call(null,"Buffer.add!*",b);
+
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.Handler = function(){};
+
+/**
+ * returns true if has callback. Must work w/o lock
+ */
+cljs.core.async.impl.protocols.active_QMARK_ = (function cljs$core$async$impl$protocols$active_QMARK_(h){
+if((!((h == null))) && (!((h.cljs$core$async$impl$protocols$Handler$active_QMARK_$arity$1 == null)))){
+return h.cljs$core$async$impl$protocols$Handler$active_QMARK_$arity$1(h);
+} else {
+var x__7206__auto__ = (((h == null))?null:h);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.active_QMARK_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,h);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.active_QMARK_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,h);
+} else {
+throw cljs.core.missing_protocol.call(null,"Handler.active?",h);
 }
 }
-})().call(null,b,itm);
 }
 });
-cljs.core.async.impl.protocols.add_BANG_ = (function() {
-var add_BANG_ = null;
-var add_BANG___1 = (function (b){return b;
-});
-var add_BANG___2 = (function (b,itm){if(!((itm == null)))
-{} else
-{throw (new Error(("Assert failed: "+cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.pr_str.call(null,cljs.core.list(new cljs.core.Symbol(null,"not","not",1044554643,null),cljs.core.list(new cljs.core.Symbol(null,"nil?","nil?",1612038930,null),new cljs.core.Symbol(null,"itm","itm",-713282527,null))))))));
+
+/**
+ * returns true if this handler may be blocked, otherwise it must not block
+ */
+cljs.core.async.impl.protocols.blockable_QMARK_ = (function cljs$core$async$impl$protocols$blockable_QMARK_(h){
+if((!((h == null))) && (!((h.cljs$core$async$impl$protocols$Handler$blockable_QMARK_$arity$1 == null)))){
+return h.cljs$core$async$impl$protocols$Handler$blockable_QMARK_$arity$1(h);
+} else {
+var x__7206__auto__ = (((h == null))?null:h);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.blockable_QMARK_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,h);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.blockable_QMARK_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,h);
+} else {
+throw cljs.core.missing_protocol.call(null,"Handler.blockable?",h);
 }
+}
+}
+});
+
+/**
+ * commit to fulfilling its end of the transfer, returns cb. Must be called within lock
+ */
+cljs.core.async.impl.protocols.commit = (function cljs$core$async$impl$protocols$commit(h){
+if((!((h == null))) && (!((h.cljs$core$async$impl$protocols$Handler$commit$arity$1 == null)))){
+return h.cljs$core$async$impl$protocols$Handler$commit$arity$1(h);
+} else {
+var x__7206__auto__ = (((h == null))?null:h);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.commit[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,h);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.commit["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,h);
+} else {
+throw cljs.core.missing_protocol.call(null,"Handler.commit",h);
+}
+}
+}
+});
+
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.Buffer = function(){};
+
+/**
+ * returns true if buffer can accept put
+ */
+cljs.core.async.impl.protocols.full_QMARK_ = (function cljs$core$async$impl$protocols$full_QMARK_(b){
+if((!((b == null))) && (!((b.cljs$core$async$impl$protocols$Buffer$full_QMARK_$arity$1 == null)))){
+return b.cljs$core$async$impl$protocols$Buffer$full_QMARK_$arity$1(b);
+} else {
+var x__7206__auto__ = (((b == null))?null:b);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.full_QMARK_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,b);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.full_QMARK_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,b);
+} else {
+throw cljs.core.missing_protocol.call(null,"Buffer.full?",b);
+}
+}
+}
+});
+
+/**
+ * remove and return next item from buffer, called under chan mutex
+ */
+cljs.core.async.impl.protocols.remove_BANG_ = (function cljs$core$async$impl$protocols$remove_BANG_(b){
+if((!((b == null))) && (!((b.cljs$core$async$impl$protocols$Buffer$remove_BANG_$arity$1 == null)))){
+return b.cljs$core$async$impl$protocols$Buffer$remove_BANG_$arity$1(b);
+} else {
+var x__7206__auto__ = (((b == null))?null:b);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.remove_BANG_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,b);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.remove_BANG_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,b);
+} else {
+throw cljs.core.missing_protocol.call(null,"Buffer.remove!",b);
+}
+}
+}
+});
+
+/**
+ * if room, add item to the buffer, returns b, called under chan mutex
+ */
+cljs.core.async.impl.protocols.add_BANG__STAR_ = (function cljs$core$async$impl$protocols$add_BANG__STAR_(b,itm){
+if((!((b == null))) && (!((b.cljs$core$async$impl$protocols$Buffer$add_BANG__STAR_$arity$2 == null)))){
+return b.cljs$core$async$impl$protocols$Buffer$add_BANG__STAR_$arity$2(b,itm);
+} else {
+var x__7206__auto__ = (((b == null))?null:b);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.add_BANG__STAR_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,b,itm);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.add_BANG__STAR_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,b,itm);
+} else {
+throw cljs.core.missing_protocol.call(null,"Buffer.add!*",b);
+}
+}
+}
+});
+
+/**
+ * called on chan closed under chan mutex, return ignored
+ */
+cljs.core.async.impl.protocols.close_buf_BANG_ = (function cljs$core$async$impl$protocols$close_buf_BANG_(b){
+if((!((b == null))) && (!((b.cljs$core$async$impl$protocols$Buffer$close_buf_BANG_$arity$1 == null)))){
+return b.cljs$core$async$impl$protocols$Buffer$close_buf_BANG_$arity$1(b);
+} else {
+var x__7206__auto__ = (((b == null))?null:b);
+var m__7207__auto__ = (cljs.core.async.impl.protocols.close_buf_BANG_[goog.typeOf(x__7206__auto__)]);
+if(!((m__7207__auto__ == null))){
+return m__7207__auto__.call(null,b);
+} else {
+var m__7207__auto____$1 = (cljs.core.async.impl.protocols.close_buf_BANG_["_"]);
+if(!((m__7207__auto____$1 == null))){
+return m__7207__auto____$1.call(null,b);
+} else {
+throw cljs.core.missing_protocol.call(null,"Buffer.close-buf!",b);
+}
+}
+}
+});
+
+cljs.core.async.impl.protocols.add_BANG_ = (function cljs$core$async$impl$protocols$add_BANG_(var_args){
+var args8843 = [];
+var len__7651__auto___8846 = arguments.length;
+var i__7652__auto___8847 = (0);
+while(true){
+if((i__7652__auto___8847 < len__7651__auto___8846)){
+args8843.push((arguments[i__7652__auto___8847]));
+
+var G__8848 = (i__7652__auto___8847 + (1));
+i__7652__auto___8847 = G__8848;
+continue;
+} else {
+}
+break;
+}
+
+var G__8845 = args8843.length;
+switch (G__8845) {
+case 1:
+return cljs.core.async.impl.protocols.add_BANG_.cljs$core$IFn$_invoke$arity$1((arguments[(0)]));
+
+break;
+case 2:
+return cljs.core.async.impl.protocols.add_BANG_.cljs$core$IFn$_invoke$arity$2((arguments[(0)]),(arguments[(1)]));
+
+break;
+default:
+throw (new Error([cljs.core.str("Invalid arity: "),cljs.core.str(args8843.length)].join('')));
+
+}
+});
+
+cljs.core.async.impl.protocols.add_BANG_.cljs$core$IFn$_invoke$arity$1 = (function (b){
+return b;
+});
+
+cljs.core.async.impl.protocols.add_BANG_.cljs$core$IFn$_invoke$arity$2 = (function (b,itm){
+if(!((itm == null))){
+} else {
+throw (new Error("Assert failed: (not (nil? itm))"));
+}
+
 return cljs.core.async.impl.protocols.add_BANG__STAR_.call(null,b,itm);
 });
-add_BANG_ = function(b,itm){
-switch(arguments.length){
-case 1:
-return add_BANG___1.call(this,b);
-case 2:
-return add_BANG___2.call(this,b,itm);
-}
-throw(new Error('Invalid arity: ' + arguments.length));
-};
-add_BANG_.cljs$core$IFn$_invoke$arity$1 = add_BANG___1;
-add_BANG_.cljs$core$IFn$_invoke$arity$2 = add_BANG___2;
-return add_BANG_;
-})()
-;
-cljs.core.async.impl.protocols.UnblockingBuffer = (function (){var obj17107 = {};return obj17107;
-})();
+
+cljs.core.async.impl.protocols.add_BANG_.cljs$lang$maxFixedArity = 2;
+
+
+/**
+ * @interface
+ */
+cljs.core.async.impl.protocols.UnblockingBuffer = function(){};
+
 
 //# sourceMappingURL=protocols.js.map

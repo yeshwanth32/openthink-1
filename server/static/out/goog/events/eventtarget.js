@@ -18,7 +18,6 @@
  * {@code goog.events.Listenable}.
  *
  * @author arv@google.com (Erik Arvidsson) [Original implementation]
- * @author pupius@google.com (Daniel Pupius) [Port to use goog.events]
  * @see ../demos/eventtarget.html
  * @see goog.events.Listenable
  */
@@ -86,7 +85,7 @@ goog.events.EventTarget = function() {
   /**
    * Parent event target, used during event bubbling.
    *
-   * TODO(user): Change this to goog.events.Listenable. This
+   * TODO(chrishenry): Change this to goog.events.Listenable. This
    * currently breaks people who expect getParentEventTarget to return
    * goog.events.EventTarget.
    *
@@ -248,7 +247,7 @@ goog.events.EventTarget.prototype.unlistenByKey = function(key) {
 
 /** @override */
 goog.events.EventTarget.prototype.removeAllListeners = function(opt_type) {
-  // TODO(user): Previously, removeAllListeners can be called on
+  // TODO(chrishenry): Previously, removeAllListeners can be called on
   // uninitialized EventTarget, so we preserve that behavior. We
   // should remove this when usages that rely on that fact are purged.
   if (!this.eventTargetListeners_) {
@@ -261,7 +260,7 @@ goog.events.EventTarget.prototype.removeAllListeners = function(opt_type) {
 /** @override */
 goog.events.EventTarget.prototype.fireListeners = function(
     type, capture, eventObject) {
-  // TODO(user): Original code avoids array creation when there
+  // TODO(chrishenry): Original code avoids array creation when there
   // is no listener, so we do the same. If this optimization turns
   // out to be not required, we can replace this with
   // getListeners(type, capture) instead, which is simpler.
@@ -331,7 +330,7 @@ goog.events.EventTarget.prototype.assertInitialized_ = function() {
   goog.asserts.assert(
       this.eventTargetListeners_,
       'Event target is not initialized. Did you call the superclass ' +
-      '(goog.events.EventTarget) constructor?');
+          '(goog.events.EventTarget) constructor?');
 };
 
 
@@ -340,7 +339,7 @@ goog.events.EventTarget.prototype.assertInitialized_ = function() {
  *
  * @param {!Object} target The target to dispatch on.
  * @param {goog.events.Event|Object|string} e The event object.
- * @param {Array.<goog.events.Listenable>=} opt_ancestorsTree The ancestors
+ * @param {Array<goog.events.Listenable>=} opt_ancestorsTree The ancestors
  *     tree of the target, in reverse order from the closest ancestor
  *     to the root event target. May be null if the target has no ancestor.
  * @return {boolean} If anyone called preventDefault on the event object (or
@@ -376,7 +375,7 @@ goog.events.EventTarget.dispatchEventInternal_ = function(
 
   // Executes capture and bubble listeners on the target.
   if (!e.propagationStopped_) {
-    currentTarget = e.currentTarget = target;
+    currentTarget = /** @type {?} */ (e.currentTarget = target);
     rv = currentTarget.fireListeners(type, true, e) && rv;
     if (!e.propagationStopped_) {
       rv = currentTarget.fireListeners(type, false, e) && rv;
